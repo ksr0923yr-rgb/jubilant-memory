@@ -1,0 +1,3758 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>受験ガチャ ― 小4から高校受験まで ―</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <!-- Google Fonts: レトロRPGドットフォント DotGothic16 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
+
+  <style>
+    /* =================================================================
+       8ビット レトロRPG（ファミコン／ドラクエ風）デザインシステム
+       スマホ縦画面・片手親指操作・セーフエリア完全対応
+       ================================================================= */
+    * {
+      font-family: 'DotGothic16', monospace !important;
+      letter-spacing: 0.04em;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      background-color: #08080c;
+      color: #ffffff;
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+      width: 100%;
+      -webkit-tap-highlight-color: transparent;
+      image-rendering: pixelated;
+      scroll-padding-top: env(safe-area-inset-top, 0px);
+    }
+
+    body {
+      padding-top: env(safe-area-inset-top, 0px);
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0 0 auto;
+      height: env(safe-area-inset-top, 0px);
+      background: #08080c;
+      z-index: 40;
+    }
+
+    /* 中央RPG筐体コンテナ（スマホ全幅〜最大540px） */
+    .rpg-shell {
+      width: 100%;
+      max-width: 540px;
+      min-height: 100dvh;
+      margin: 0 auto;
+      background-color: #08080c;
+      border-left: 1px solid #262636;
+      border-right: 1px solid #262636;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+
+    @media (max-width: 540px) {
+      .rpg-shell {
+        border-left: none;
+        border-right: none;
+      }
+    }
+
+    /* ドラクエ風 黒背景＋白二重枠ウィンドウ */
+    .rpg-window {
+      background-color: #08080c;
+      border: 4px double #ffffff;
+      box-shadow: inset 0 0 0 2px #08080c, 0 0 0 1px #1e1e2e;
+      border-radius: 0px !important;
+    }
+
+    /* ゴールド二重枠ウィンドウ（合格・イベント・重要画面） */
+    .rpg-window-gold {
+      background-color: #100c02;
+      border: 4px double #facc15;
+      box-shadow: inset 0 0 0 2px #08080c, 0 0 16px rgba(250, 204, 21, 0.22);
+      border-radius: 0px !important;
+    }
+
+    /* ピンチ状態（体調・やる気 50以下）の黄色ウィンドウ */
+    .rpg-window-warn {
+      background-color: #120e02;
+      border: 4px double #facc15;
+      box-shadow: inset 0 0 0 2px #08080c;
+      border-radius: 0px !important;
+    }
+
+    /* 瀕死・入試本番状態の赤色ウィンドウ */
+    .rpg-window-danger {
+      background-color: #160406;
+      border: 4px double #ef4444;
+      box-shadow: inset 0 0 0 2px #08080c;
+      border-radius: 0px !important;
+    }
+
+    /* コマンドボタン（スマホで押しやすいタップ領域とフィードバック） */
+    .rpg-cmd {
+      position: relative;
+      background-color: #08080c;
+      border: 2px solid #ffffff;
+      border-radius: 0px !important;
+      transition: background-color 0.06s steps(2), border-color 0.06s steps(2);
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    .rpg-cmd:hover:not(:disabled),
+    .rpg-cmd:focus-visible:not(:disabled) {
+      background-color: #121c38;
+      border-color: #facc15;
+      outline: none;
+    }
+
+    .rpg-cmd:active:not(:disabled) {
+      transform: translateY(2px);
+      background-color: #1e3a8a;
+      border-color: #facc15;
+    }
+
+    .rpg-cmd:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      border-color: #52525b;
+    }
+
+    /* ▶ カーソル点滅 */
+    @keyframes cursorBlink {
+      0%, 49% { opacity: 1; }
+      50%, 100% { opacity: 0; }
+    }
+
+    .cursor-arrow {
+      display: inline-block;
+      color: #ffffff;
+    }
+
+    .rpg-cmd:hover:not(:disabled) .cursor-arrow,
+    .rpg-cmd:focus-visible:not(:disabled) .cursor-arrow,
+    .always-blink {
+      animation: cursorBlink 0.65s infinite;
+      color: #facc15;
+    }
+
+    /* レトロ出現アニメ */
+    @keyframes retroPop {
+      0% { transform: scale(0.96); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .animate-retro-pop {
+      animation: retroPop 0.16s steps(3) forwards;
+    }
+
+    /* ドット風ステータスバー */
+    .stat-bar-fill {
+      transition: width 0.25s steps(6), background-color 0.2s steps(2);
+    }
+
+    /* カスタムスクロールバー */
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #08080c;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #a3a3a3;
+    }
+      @keyframes jgbob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+    @keyframes jgtw{0%,100%{opacity:.25}50%{opacity:1}}
+    .sprite{display:inline-block;vertical-align:middle;animation:jgbob .9s steps(2) infinite}
+    .tw{display:inline-block;animation:jgtw 1.4s steps(3) infinite}
+    html{font-size:clamp(16px,4.6vw,18px)}
+  
+    /* 8ビット風ボリュームスライダー */
+    input[type="range"].rpg-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 10px;
+      background: #181824;
+      border: 2px solid #ffffff;
+      outline: none;
+      cursor: pointer;
+    }
+    input[type="range"].rpg-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 20px;
+      background: #facc15;
+      border: 2px solid #08080c;
+      cursor: pointer;
+    }
+    input[type="range"].rpg-slider::-moz-range-thumb {
+      width: 16px;
+      height: 20px;
+      background: #facc15;
+      border: 2px solid #08080c;
+      border-radius: 0;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- メインRPGシェル -->
+  <div id="app-container" class="rpg-shell text-white select-none">
+
+    <!-- =================================================================
+         上部ナビゲーションヘッダー（プレイ中は不要なボタンを引っ込める）
+         ================================================================= -->
+    <header class="sticky top-0 z-30 bg-[#08080c] border-b-4 border-double border-white px-3 py-2 flex items-center justify-between gap-2">
+      <button onclick="goHome()" class="text-left flex items-center gap-2 active:text-yellow-300 shrink-0 min-h-[38px]">
+        <span class="text-yellow-300 text-base">⚔️</span>
+        <div>
+          <h1 class="text-sm sm:text-base font-bold text-white leading-none">受験ガチャ</h1>
+          <p id="header-subtitle" class="text-[10px] text-neutral-300 mt-1">― 小4から高校受験まで ―</p>
+        </div>
+      </button>
+
+      <div class="flex items-center gap-1 justify-end min-w-0">
+        <!-- サウンドクイック切替＆音量設定 -->
+        <button id="btn-sound-toggle" onclick="RetroAudio.toggleMute()"
+          class="rpg-cmd text-[11px] sm:text-xs px-2 py-1.5 min-h-[38px] text-emerald-300 border-emerald-300 shrink-0"
+          aria-label="BGM・効果音ON/OFF" title="BGM・効果音 ON/OFF">
+          ♪ON
+        </button>
+        <button onclick="openModal('modal-sound')"
+          class="rpg-cmd text-[11px] sm:text-xs px-2 py-1.5 min-h-[38px] text-neutral-200 shrink-0"
+          aria-label="サウンド設定" title="音量・BGM設定">
+          音
+        </button>
+
+        <!-- タイトル・設定画面用のナビ -->
+        <div id="header-nav-idle" class="flex items-center gap-1 justify-end">
+          <button onclick="openModal('modal-titles')"
+            class="rpg-cmd text-[11px] sm:text-xs px-2 py-1.5 min-h-[38px] text-yellow-300 border-yellow-300">
+            称号
+          </button>
+          <button onclick="openModal('modal-guide')"
+            class="rpg-cmd text-[11px] sm:text-xs px-2 py-1.5 min-h-[38px] text-white">
+            説明
+          </button>
+        </div>
+
+        <!-- ゲームプレイ中用のコンパクトナビ -->
+        <div id="header-nav-play" class="hidden flex items-center gap-1 justify-end">
+          <button onclick="openModal('modal-mocks')"
+            class="rpg-cmd text-[11px] sm:text-xs px-2 py-1.5 min-h-[38px] text-amber-300 border-amber-300">
+            模試
+          </button>
+          <button onclick="openModal('modal-target')"
+            class="rpg-cmd text-[11px] sm:text-xs px-2 py-1.5 min-h-[38px] text-sky-300 border-sky-300">
+            志望
+          </button>
+          <button onclick="openModal('modal-guide')"
+            class="rpg-cmd text-[11px] sm:text-xs px-2 py-1.5 min-h-[38px] text-neutral-200" aria-label="ルール説明">
+            ？
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- =================================================================
+         画面1: タイトル画面 (TITLE SCREEN)
+         ================================================================= -->
+    <main id="screen-top" class="flex-1 px-3 pt-3.5 pb-8 space-y-4">
+      <div class="rpg-window-gold p-3.5 text-center space-y-3">
+        <div class="inline-block border border-yellow-300 bg-[#08080c] text-yellow-300 text-[11px] px-2.5 py-0.5">
+          ★ 中学受験・高校受験 通し人生RPG ★
+        </div>
+
+        <div class="py-0.5">
+          <h2 class="text-2xl sm:text-3xl font-bold text-yellow-300 tracking-wider leading-snug">
+            受験ガチャ
+          </h2>
+          <p class="text-xs sm:text-sm text-white mt-1">― 小4から高校受験まで ―</p>
+        </div>
+
+        <p class="text-xs text-neutral-200 leading-relaxed border-t border-b border-neutral-700 py-2.5">
+          
+          全国の実在の中学・高校、<br>週間1時間単位の科目別学習配分、科目別模試成績返却票、<br>学年ごとに変わる出来事を乗り越えて志望校をつかもう！<br>
+          <span class="text-yellow-300">※ 記録はこの端末だけに保存されます（完全非公開）</span>
+        </p>
+
+        <!-- プレイヤー自身のリアル集計ステータス -->
+        <div class="grid grid-cols-3 gap-1.5 text-xs">
+          <div class="border border-neutral-600 py-2 px-1">
+            <span class="text-[10px] text-neutral-400 block">挑戦回数</span>
+            <span id="stat-my-play-count" class="text-yellow-300 font-bold">0 回</span>
+          </div>
+          <div class="border border-neutral-600 py-2 px-1">
+            <span class="text-[10px] text-neutral-400 block">進学した学校/学部</span>
+            <span class="text-sky-300 font-bold"><span id="stat-conquered-unis">0</span> / <span id="stat-total-unis">0</span></span>
+          </div>
+          <div class="border border-neutral-600 py-2 px-1">
+            <span class="text-[10px] text-neutral-400 block">獲得した称号</span>
+            <span class="text-emerald-300 font-bold"><span id="stat-unlocked-titles">0</span> / <span id="stat-max-titles">7</span></span>
+          </div>
+        </div>
+
+        <!-- 冒険スタートモード -->
+        <div id="edition-buttons" class="space-y-2 pt-1"></div>
+
+        <!-- 図鑑ショートカット -->
+        <div class="pt-0.5">
+          <button onclick="openModal('modal-titles')"
+            class="rpg-cmd w-full py-2.5 px-3 min-h-[44px] text-xs text-center text-white">
+            <span class="cursor-arrow">▶</span> 称号図鑑を見る（全26種）
+          </button>
+        </div>
+      </div>
+
+      <!-- 自分の冒険の戦歴 -->
+      <section class="rpg-window p-3.5 space-y-2.5">
+        <div class="flex items-center justify-between border-b-2 border-white pb-1.5">
+          <h3 class="text-xs sm:text-sm font-bold text-yellow-300">
+            ▼ 自分の冒険の戦歴（リアル記録）
+          </h3>
+          <button id="btn-open-reset" onclick="openModal('modal-reset')"
+            class="hidden rpg-cmd text-[11px] px-2.5 py-1 min-h-[34px] text-red-400 border-red-400">
+            ▶ 戦歴を消去
+          </button>
+        </div>
+
+        <div id="my-records-list" class="space-y-2 max-h-80 overflow-y-auto pr-1"></div>
+      </section>
+    </main>
+
+    <!-- =================================================================
+         画面1.5: あなたの診断画面 (DIAGNOSIS SCREEN)
+         ================================================================= -->
+    <section id="screen-diag" class="hidden flex-1 px-3 pt-3 pb-12 space-y-3"></section>
+
+    <!-- =================================================================
+         画面2: 勇者作成＆志望校・模試設定画面 (SETUP SCREEN)
+         ================================================================= -->
+    <section id="screen-setup" class="hidden flex-1 px-3 pt-3 pb-24 space-y-3">
+      <div class="rpg-window p-2.5 flex items-center justify-between">
+        <span id="setup-mode-title" class="text-sm font-bold text-yellow-300">▼ 受験の準備</span>
+        <button onclick="goHome()" class="rpg-cmd text-xs px-3 py-1.5 min-h-[38px]">
+          <span class="cursor-arrow">▶</span> タイトルへ
+        </button>
+      </div>
+
+      <!-- 1. 主人公の名前入力 -->
+      <div class="rpg-window p-3 space-y-1.5">
+        <label for="input-player-name" class="block text-xs text-yellow-300">
+          ▶ 主人公（受験生）の名前
+        </label>
+        <input id="input-player-name" type="text" maxlength="10" value="ロト"
+          oninput="if(S)S.name=this.value"
+          class="w-full bg-[#08080c] border-2 border-white focus:border-yellow-300 px-3 py-2.5 text-sm text-white outline-none min-h-[44px]"
+          placeholder="名前（10文字まで）">
+      </div>
+
+      <div class="rpg-window p-3 space-y-1.5">
+        <div class="block text-xs text-yellow-300">▶ 性別（受験できる学校が変わります）</div>
+        <div class="grid grid-cols-2 gap-2">
+          <button id="sx-m" onclick="setSx('m')" class="rpg-cmd p-2 min-h-[44px] text-sm">♂ 男の子</button>
+          <button id="sx-f" onclick="setSx('f')" class="rpg-cmd p-2 min-h-[44px] text-sm">♀ 女の子</button>
+        </div>
+        <p class="text-[10px] text-neutral-300">男の子は女子校、女の子は男子校を受験できません。共学校は男女で駿台の合格ラインが違う学校があります。</p>
+      </div>
+
+      <!-- 2. 運命の生まれガチャ -->
+      <div class="rpg-window p-3 space-y-2.5">
+        <div class="flex items-center justify-between">
+          <span id="setup-roll-header" class="text-xs text-yellow-300">▶ 生まれガチャ</span>
+          <span id="reroll-badge" class="text-[11px] border border-white px-2 py-0.5 text-neutral-200">
+            引き直し：残り1回
+          </span>
+        </div>
+
+        <div id="gacha-result-card" class="border-2 border-neutral-600 bg-[#08080c] p-3 text-center space-y-2.5"></div>
+      </div>
+
+      <!-- 3. 志望校（学部・学科）＆受ける模試の設定ウィンドウ -->
+      <div id="setup-uni-selector-box" class="rpg-window p-3 space-y-2.5">
+        <div class="flex items-center justify-between">
+          <span class="text-xs text-yellow-300">▶ 第一志望（学部・学科）＆模試設定</span>
+          <span id="setup-uni-count-badge" class="text-[11px] text-neutral-300"></span>
+        </div>
+
+        <!-- 選択中の志望校＋模試設定ボックス -->
+        <div id="setup-mock-config-box" class="hidden border-2 border-amber-300 bg-[#120e02] p-2.5 space-y-2 text-xs"></div>
+
+        <!-- 大学・学部名検索＆フィルターボックス -->
+        <div id="setup-search-wrap" class="hidden space-y-1.5">
+          <input id="setup-search-input" type="text" oninput="renderSetupMockAndList()"
+            class="w-full bg-[#08080c] border border-white focus:border-yellow-300 px-3 py-2 text-xs text-white outline-none min-h-[40px]"
+            placeholder="🔍 学校名で検索（例：開成、灘、日比谷...）">
+          <div id="setup-filter-bar" class="flex flex-wrap gap-1"></div>
+        </div>
+
+        <!-- 学校・学部一覧リスト -->
+        <div id="uni-selection-list" class="space-y-1.5 max-h-64 overflow-y-auto pr-1"></div>
+      </div>
+
+      <!-- 画面下部固定：冒険開始コマンド -->
+      <div class="fixed bottom-0 left-0 right-0 z-20 px-3 pb-3 pt-2 bg-gradient-to-t from-[#08080c] via-[#08080c] to-transparent pointer-events-none">
+        <div class="max-w-[540px] mx-auto pointer-events-auto">
+          <button id="btn-begin-adventure" onclick="beginGameLoop()" disabled
+            class="rpg-cmd w-full py-3.5 px-3 min-h-[50px] text-sm sm:text-base font-bold text-yellow-300 border-yellow-300 bg-[#0a1026] shadow-lg">
+            <span class="cursor-arrow always-blink">▶</span> この条件で4月から始める！
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- =================================================================
+         画面3: 4月〜翌年1月 ターン制受験攻略画面 (GAME SCREEN)
+         ================================================================= -->
+    <section id="screen-game" class="hidden flex-1 px-3 pt-2.5 pb-6 space-y-2.5">
+      <!-- コンパクトヘッダーバー（年月・文理バッジ・残りターン・平均偏差値＆直近模試偏差値・判定） -->
+      <div class="rpg-window px-2.5 py-2 space-y-1.5">
+        <div class="flex items-center justify-between gap-1.5">
+          <div class="flex items-center gap-1.5 min-w-0">
+            <span id="game-chapter-title" class="text-[10px] text-yellow-300 shrink-0">中学受験編</span>
+            <span id="game-month-title" class="text-sm sm:text-base font-bold text-white truncate">高1 4月</span>
+            <span id="hud-bunri-badge" class="hidden text-[10px] px-1.5 py-0.5 font-bold shrink-0"></span>
+            <span id="game-turns-left" class="text-[10px] border border-neutral-500 px-1 text-neutral-200 shrink-0">あと 34</span>
+          </div>
+          <div class="shrink-0 flex items-center gap-1">
+            <span class="text-[10px] text-neutral-400">志望判定</span>
+            <span id="hud-judgment" class="text-sm font-bold text-neutral-400">―</span>
+          </div>
+        </div>
+
+        <!-- 平均偏差値 ＆ 直近模試偏差値 デュアル表示バー -->
+        <div class="grid grid-cols-2 gap-1.5 border-t border-neutral-700 pt-1.5">
+          <div class="bg-[#0c0c14] border border-neutral-700 px-2 py-1">
+            <div class="text-[10px] text-neutral-300">平均偏差値（累積）</div>
+            <div class="flex items-baseline gap-1">
+              <span id="hud-dev" class="text-base font-bold text-yellow-300">未受験</span>
+              <span id="hud-dev-diff" class="text-[10px] text-neutral-400 truncate"></span>
+            </div>
+          </div>
+          <div class="bg-[#0c0c14] border border-neutral-700 px-2 py-1">
+            <div class="text-[10px] text-neutral-300">直近模試偏差値</div>
+            <div class="flex items-baseline gap-1">
+              <span id="hud-last-dev" class="text-base font-bold text-sky-300">未受験</span>
+              <span id="hud-last-diff" class="text-[10px] text-neutral-400 truncate"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 折りたたみ可能（引っ込められる）ステータス＆模試設定ウィンドウ -->
+      <div id="status-window-box" class="rpg-window p-2.5 space-y-2">
+        <!-- 常時表示の1行サマリー＆引っ込めるボタン -->
+        <div class="flex items-center justify-between gap-2">
+          <div class="text-xs truncate min-w-0">
+            <span id="hud-hero-name" class="font-bold text-white">ロト</span>
+            <span id="hud-trait-tag" class="ml-1 text-[10px] text-sky-300"></span>
+            <span id="hud-mini-stats" class="hidden ml-1.5 text-[10px] text-neutral-300"></span>
+          </div>
+          <button onclick="togglePanel('hideStat')" class="rpg-cmd text-[11px] px-2.5 py-1 min-h-[34px] text-neutral-200 shrink-0">
+            <span id="toggle-stat-label">▲ 引っ込める</span>
+          </button>
+        </div>
+
+        <!-- 展開時の詳細ステータス（引っ込めると非表示になる） -->
+        <div id="status-detail-body" class="space-y-2 pt-1.5 border-t border-neutral-700">
+          <!-- 4パラメータ -->
+          <div class="grid grid-cols-4 gap-1.5 text-center">
+            <div class="border border-neutral-700 p-1.5">
+              <div class="text-[10px] text-neutral-300">体調</div>
+              <div id="hud-stamina-text" class="text-xs font-bold text-white">70</div>
+              <div class="w-full h-1.5 bg-neutral-900 mt-1">
+                <div id="hud-stamina-bar" class="stat-bar-fill h-full bg-sky-400" style="width: 70%;"></div>
+              </div>
+            </div>
+
+            <div class="border border-neutral-700 p-1.5">
+              <div class="text-[10px] text-neutral-300">やる気</div>
+              <div id="hud-mental-text" class="text-xs font-bold text-white">65</div>
+              <div class="w-full h-1.5 bg-neutral-900 mt-1">
+                <div id="hud-mental-bar" class="stat-bar-fill h-full bg-emerald-400" style="width: 65%;"></div>
+              </div>
+            </div>
+
+            <div class="border border-neutral-700 p-1.5">
+              <div class="text-[10px] text-neutral-300">自信</div>
+              <div id="hud-pastpaper-tag" class="text-xs font-bold text-amber-300">50</div>
+              <div class="w-full h-1.5 bg-neutral-900 mt-1">
+                <div id="hud-conf-bar" class="stat-bar-fill h-full bg-amber-400" style="width: 50%;"></div>
+              </div>
+            </div>
+
+            <div class="border border-neutral-700 p-1.5">
+              <div class="text-[10px] text-neutral-300">青春</div>
+              <div id="hud-knowledge" class="text-xs font-bold text-purple-300">50</div>
+              <div class="w-full h-1.5 bg-neutral-900 mt-1">
+                <div id="hud-youth-bar" class="stat-bar-fill h-full bg-purple-400" style="width: 50%;"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 第一志望＆現在の模試設定バー -->
+          <div class="text-[11px] space-y-1.5 bg-[#0c0c14] border border-neutral-700 p-2">
+            <div class="flex items-center justify-between gap-2">
+              <span id="hud-target-uni" class="text-yellow-300 font-bold truncate">第一志望：---</span>
+              <div class="flex items-center gap-1 shrink-0">
+                <button id="btn-hud-target" onclick="openModal('modal-target')" class="rpg-cmd text-[11px] px-2 py-1 min-h-[32px] text-sky-300 border-sky-300 shrink-0">
+                  志望校変更
+                </button>
+                <button id="btn-hs-exam-toggle" onclick="toggleHighSchoolExam(S&&S.ex===false)" class="hidden rpg-cmd text-[11px] px-2 py-1 min-h-[32px] text-red-400 border-red-400 shrink-0">
+                  やっぱり辞める
+                </button>
+              </div>
+            </div>
+            <div class="flex items-center justify-between gap-2">
+              <span id="hud-mock-info" class="text-amber-200 truncate">模試：---</span>
+              <button onclick="openModal('modal-target')" class="rpg-cmd text-[11px] px-2 py-1 min-h-[32px] text-amber-300 border-amber-300 shrink-0">
+                模試/飛び級
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- アクション／週間1時間単位勉強配分／イベント選択ウィンドウ -->
+      <div id="command-panel" class="rpg-window p-3 space-y-2.5"></div>
+
+      <!-- 折りたたみ可能（引っ込められる）受験日誌ウィンドウ -->
+      <div id="log-panel" class="rpg-window p-2.5 bg-[#08080c]">
+        <div class="flex items-center justify-between text-xs text-yellow-300">
+          <span>▼ 受験日誌</span>
+          <button onclick="togglePanel('hideLog')" class="rpg-cmd text-[11px] px-2.5 py-1 min-h-[34px] text-neutral-200">
+            <span id="toggle-log-label">▲ 引っ込める</span>
+          </button>
+        </div>
+        <!-- 引っ込めた時の最新1行ティッカー -->
+        <div id="game-log-mini" class="hidden text-[11px] text-neutral-200 truncate mt-1.5 pt-1.5 border-t border-neutral-800"></div>
+        <!-- 展開時の日誌リスト -->
+        <div id="game-log-box" class="text-xs text-white space-y-1.5 h-32 overflow-y-auto leading-relaxed pr-1 mt-1.5 pt-1.5 border-t border-neutral-800"></div>
+      </div>
+    </section>
+
+    <!-- =================================================================
+         画面4: 共通テスト・出願・二次試験・合格発表画面 (EXAM SCREEN)
+         ================================================================= -->
+    <section id="screen-exam" class="hidden flex-1 px-3 pt-3 pb-24 space-y-3">
+      <div class="rpg-window-danger p-3 text-center space-y-1">
+        <div id="exam-phase-sub" class="text-[11px] text-red-400">★ 入学試験 本番 ★</div>
+        <h2 id="exam-boss-header" class="text-base sm:text-lg font-bold text-white">出願・合格発表</h2>
+      </div>
+
+      <!-- 共通テスト自己採点 / 出願選択ボックス -->
+      <div id="kyotsu-battle-box" class="rpg-window p-3 text-xs space-y-2.5"></div>
+
+      <!-- 2月共テ利用速報 ＆ 二次試験（個別試験）バトルアリーナ -->
+      <div id="boss-battle-arena" class="hidden space-y-3 animate-retro-pop"></div>
+
+      <!-- 最終合格発表掲示板 -->
+      <div id="exam-announcement-area" class="hidden space-y-3 animate-retro-pop">
+        <div class="rpg-window-gold p-2.5 text-center">
+          <div class="text-xs font-bold text-yellow-300">▼ 合格発表掲示板（全出願結果）</div>
+        </div>
+        <div id="exam-results-cards" class="space-y-2"></div>
+        <div class="rpg-window p-3 space-y-2">
+          <h3 class="text-xs font-bold text-yellow-300">▼ 受験生はどの進路へ進む？</h3>
+          <div id="choice-buttons-container" class="space-y-2"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =================================================================
+         画面5: エンディング＆戦歴記録画面 (RESULT SCREEN)
+         ================================================================= -->
+    <section id="screen-result" class="hidden flex-1 px-3 pt-3.5 pb-8 space-y-3.5">
+      <div id="result-banner-box" class="rpg-window-gold p-4 text-center space-y-3 animate-retro-pop">
+        <div id="result-clear-badge" class="inline-block border-2 border-yellow-300 bg-[#08080c] text-yellow-300 text-xs font-bold px-3 py-1">
+          ★ 合格クリア！ ★
+        </div>
+
+        <div class="text-xs text-neutral-200" id="result-player-label"></div>
+
+        <div class="border-2 border-white bg-[#08080c] p-3">
+          <div id="result-summary-headline" class="text-base sm:text-lg font-bold text-yellow-300 leading-snug"></div>
+          <div id="result-sub-detail" class="text-[11px] text-neutral-300 mt-1.5 leading-relaxed"></div>
+        </div>
+
+        <div class="text-xs text-emerald-300">
+          ＊ 「自分の冒険の戦歴」に記録しました！
+        </div>
+
+        <!-- 今回獲得した称号 -->
+        <div class="text-left border-t-2 border-white pt-2.5 space-y-1.5">
+          <div class="text-xs font-bold text-yellow-300">▼ 今回獲得した称号</div>
+          <div id="result-earned-titles" class="flex flex-wrap gap-1.5"></div>
+        </div>
+      </div>
+
+      <!-- 5つの分析ウィンドウ -->
+      <div class="rpg-window p-3.5 space-y-2">
+        <div class="text-xs font-bold text-yellow-300">▼ 5つの分析（上位何％？）</div>
+        <p id="result-epilogue-text" class="text-xs text-white leading-relaxed"></p>
+      </div>
+
+      <!-- コマンドボタン -->
+      <div class="space-y-2.5">
+        <button onclick="copyResultText()"
+          class="rpg-cmd w-full py-3 px-3 min-h-[46px] text-xs sm:text-sm font-bold text-amber-300 border-amber-300">
+          <span class="cursor-arrow">▶</span> 戦歴テキストをコピーする
+        </button>
+
+        <div id="result-next-box" class="space-y-2">
+          <button onclick="nx2()"
+            class="rpg-cmd w-full py-3.5 px-3 min-h-[50px] text-sm font-bold text-sky-300 border-sky-300 bg-[#0b162c]">
+            <span class="cursor-arrow always-blink">▶</span> <span id="next-label">つぎの受験へ</span>
+          </button>
+        </div>
+
+        <button onclick="goHome()"
+          class="rpg-cmd w-full py-3 px-3 min-h-[46px] text-xs sm:text-sm font-bold text-white">
+          <span class="cursor-arrow">▶</span> タイトルへ戻る（戦歴・図鑑を見る）
+        </button>
+      </div>
+    </section>
+
+    <!-- =================================================================
+         通知メッセージウィンドウ
+         ================================================================= -->
+    <div id="toast-notification" class="fixed top-14 left-1/2 -translate-x-1/2 z-50 hidden rpg-window-gold px-4 py-2.5 text-xs font-bold text-yellow-300 whitespace-nowrap shadow-lg">
+      ＊ コピーしました！
+    </div>
+
+    <!-- =================================================================
+         モーダル0: 模試 個人成績返却票（模試受験月に自動ポップアップ＋履歴閲覧）
+         ================================================================= -->
+    <div id="modal-mock-report" class="fixed inset-0 z-50 hidden bg-black/92 flex items-center justify-center p-2.5">
+      <div class="rpg-window-gold w-full max-w-md max-h-[88vh] flex flex-col overflow-hidden animate-retro-pop">
+        <div class="p-3 border-b-4 border-double border-yellow-300 flex items-center justify-between bg-[#100c02]">
+          <div>
+            <div class="text-[10px] text-amber-300">★ 模試結果通知 ★</div>
+            <h3 class="text-sm sm:text-base font-bold text-yellow-300">▼ 模試 個人成績返却票</h3>
+          </div>
+          <button onclick="closeModal('modal-mock-report')" class="rpg-cmd text-xs px-3 py-1.5 min-h-[38px] text-yellow-300 border-yellow-300 shrink-0">
+            ▶ 確認して閉じる
+          </button>
+        </div>
+        <div id="modal-mock-report-body" class="p-3 overflow-y-auto space-y-2.5 text-xs bg-[#08080c]"></div>
+      </div>
+    </div>
+
+    <!-- =================================================================
+         モーダル1: 模試成績表＆偏差値推移（平均偏差値＋直近模試偏差値）
+         ================================================================= -->
+    <div id="modal-mocks" class="fixed inset-0 z-50 hidden bg-black/90 flex items-center justify-center p-3">
+      <div class="rpg-window w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden">
+        <div class="p-3 border-b-4 border-double border-white flex items-center justify-between bg-[#08080c]">
+          <div>
+            <h3 class="text-sm font-bold text-amber-300">▼ 模試成績表（タップで個人成績票）</h3>
+            <p id="modal-mocks-summary" class="text-[11px] text-neutral-300 mt-0.5"></p>
+          </div>
+          <button onclick="closeModal('modal-mocks')" class="rpg-cmd text-xs px-3 py-1.5 min-h-[38px] text-white shrink-0">
+            ▶ 閉じる
+          </button>
+        </div>
+        <div id="modal-mocks-body" class="p-3 overflow-y-auto space-y-2 text-xs"></div>
+      </div>
+    </div>
+
+    <!-- =================================================================
+         モーダル2: ゲーム中の志望校＆受ける模試（他学年飛び級含む）の変更モーダル
+         ================================================================= -->
+    <div id="modal-target" class="fixed inset-0 z-50 hidden bg-black/90 flex items-center justify-center p-3">
+      <div class="rpg-window w-full max-w-md max-h-[86vh] flex flex-col overflow-hidden">
+        <div class="p-3 border-b-4 border-double border-white flex items-center justify-between bg-[#08080c]">
+          <h3 class="text-sm font-bold text-sky-300">▼ 模試（飛び級可）＆志望校設定</h3>
+          <button onclick="closeModal('modal-target')" class="rpg-cmd text-xs px-3 py-1.5 min-h-[38px] text-white shrink-0">
+            ▶ 閉じる
+          </button>
+        </div>
+        <div id="modal-target-body" class="p-3 overflow-y-auto space-y-3 text-xs"></div>
+      </div>
+    </div>
+
+    <!-- =================================================================
+         モーダル3: 称号図鑑
+         ================================================================= -->
+    <div id="modal-titles" class="fixed inset-0 z-50 hidden bg-black/90 flex items-center justify-center p-3">
+      <div class="rpg-window w-full max-w-md max-h-[84vh] flex flex-col overflow-hidden">
+        <div class="p-3 border-b-4 border-double border-white flex items-center justify-between bg-[#08080c]">
+          <h3 class="text-sm font-bold text-yellow-300">▼ 称号図鑑（全26種）</h3>
+          <button onclick="closeModal('modal-titles')" class="rpg-cmd text-xs px-3 py-1.5 min-h-[38px] text-white shrink-0">
+            ▶ 閉じる
+          </button>
+        </div>
+        <div id="modal-titles-list" class="p-3 overflow-y-auto space-y-2 text-xs"></div>
+      </div>
+    </div>
+
+    <!-- =================================================================
+         モーダル4: 冒険の説明書
+         ================================================================= -->
+    <div id="modal-guide" class="fixed inset-0 z-50 hidden bg-black/90 flex items-center justify-center p-3">
+      <div class="rpg-window w-full max-w-md max-h-[84vh] flex flex-col overflow-hidden">
+        <div class="p-3 border-b-4 border-double border-white flex items-center justify-between bg-[#08080c]">
+          <h3 class="text-sm font-bold text-yellow-300">▼ 冒険の説明書（ルール解説）</h3>
+          <button onclick="closeModal('modal-guide')" class="rpg-cmd text-xs px-3 py-1.5 min-h-[38px] text-white shrink-0">
+            ▶ 閉じる
+          </button>
+        </div>
+        <div id="guide-body" class="p-3.5 overflow-y-auto space-y-3 text-xs text-white leading-relaxed"></div>
+      </div>
+    </div>
+
+    <!-- =================================================================
+         モーダル6: サウンド設定（ゆるめBGM・8ビット効果音）
+         ================================================================= -->
+    <div id="modal-sound" class="fixed inset-0 z-50 hidden bg-black/90 flex items-center justify-center p-3">
+      <div class="rpg-window w-full max-w-md max-h-[86vh] flex flex-col overflow-hidden">
+        <div class="p-3 border-b-4 border-double border-white flex items-center justify-between bg-[#08080c]">
+          <h3 class="text-sm font-bold text-emerald-300">▼ サウンド設定（8bit ゆるめ音源）</h3>
+          <button onclick="closeModal('modal-sound')" class="rpg-cmd text-xs px-3 py-1.5 min-h-[38px] text-white shrink-0">
+            ▶ 閉じる
+          </button>
+        </div>
+        <div id="sound-modal-body" class="p-3.5 overflow-y-auto space-y-3 text-xs text-white">
+          <div class="grid grid-cols-2 gap-2">
+            <button id="btn-cfg-bgm" onclick="RetroAudio.toggleBgm()" class="rpg-cmd py-2.5 px-2 min-h-[44px] font-bold text-emerald-300 border-emerald-300">
+              ▶ BGM：ON
+            </button>
+            <button id="btn-cfg-se" onclick="RetroAudio.toggleSe()" class="rpg-cmd py-2.5 px-2 min-h-[44px] font-bold text-sky-300 border-sky-300">
+              ▶ 効果音：ON
+            </button>
+          </div>
+
+          <div class="border border-neutral-700 bg-[#0c0c14] p-2.5 space-y-3">
+            <div>
+              <div class="flex justify-between mb-1">
+                <span class="text-emerald-300">♪ BGM 音量（ゆるめローパス）</span>
+                <b id="lbl-bgm-vol" class="text-yellow-300">35%</b>
+              </div>
+              <input id="rng-bgm-vol" type="range" min="0" max="100" step="5" value="35"
+                oninput="RetroAudio.setBgmVol(this.value)" class="rpg-slider">
+            </div>
+
+            <div>
+              <div class="flex justify-between mb-1">
+                <span class="text-sky-300">🔔 効果音（SE）音量</span>
+                <b id="lbl-se-vol" class="text-yellow-300">55%</b>
+              </div>
+              <input id="rng-se-vol" type="range" min="0" max="100" step="5" value="55"
+                oninput="RetroAudio.setSeVol(this.value)" class="rpg-slider">
+            </div>
+          </div>
+
+          <div class="border border-neutral-700 bg-[#0c0c14] p-2.5 space-y-2">
+            <div class="flex justify-between items-center">
+              <span class="text-yellow-300 font-bold">▼ 現在のBGMトラック</span>
+              <span id="lbl-current-bgm" class="text-[11px] text-emerald-300">放課後のプロローグ</span>
+            </div>
+            <div class="grid grid-cols-2 gap-1.5 text-[11px]">
+              <button onclick="RetroAudio.previewScene('title')" class="rpg-cmd py-2 px-2 text-left text-neutral-200">▶ タイトル・準備</button>
+              <button onclick="RetroAudio.previewScene('study')" class="rpg-cmd py-2 px-2 text-left text-neutral-200">▶ 夜ふけの自習室</button>
+              <button onclick="RetroAudio.previewScene('event')" class="rpg-cmd py-2 px-2 text-left text-neutral-200">▶ ひとやすみ休憩</button>
+              <button onclick="RetroAudio.previewScene('exam')" class="rpg-cmd py-2 px-2 text-left text-neutral-200">▶ 静かなる決戦</button>
+              <button onclick="RetroAudio.previewScene('result_win')" class="rpg-cmd py-2 px-2 text-left text-amber-300 col-span-2">▶ 桜咲く合格エンディング</button>
+            </div>
+          </div>
+
+          <div class="border border-neutral-700 bg-[#0c0c14] p-2.5 space-y-2">
+            <div class="text-sky-300 font-bold">▼ 効果音テスト</div>
+            <div class="grid grid-cols-4 gap-1.5 text-[11px]">
+              <button onclick="RetroAudio.playSE('decide',true)" class="rpg-cmd py-2 px-1 text-center">決定</button>
+              <button onclick="RetroAudio.playSE('gacha',true)" class="rpg-cmd py-2 px-1 text-center text-yellow-300">ガチャ</button>
+              <button onclick="RetroAudio.playSE('mock_good',true)" class="rpg-cmd py-2 px-1 text-center text-emerald-300">模試A</button>
+              <button onclick="RetroAudio.playSE('pass',true)" class="rpg-cmd py-2 px-1 text-center text-amber-300">合格！</button>
+            </div>
+          </div>
+
+          <p class="text-[11px] text-neutral-400 leading-relaxed">
+            ※ Web Audio API による内蔵8bitシンセ音源です（通信量ゼロ・オフライン対応）。設定は自動保存されます。
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- =================================================================
+         モーダル5: 戦歴リセット確認
+         ================================================================= -->
+    <div id="modal-reset" class="fixed inset-0 z-50 hidden bg-black/90 flex items-center justify-center p-3">
+      <div class="rpg-window-danger w-full max-w-sm p-4 space-y-4">
+        <h3 class="text-sm font-bold text-red-400">▼ 自分の戦歴を消去しますか？</h3>
+        <p class="text-xs text-white leading-relaxed">
+          これまでに保存された「自分の冒険の戦歴」がすべて消去されます。<br>
+          （※獲得した称号は保持されます）
+        </p>
+        <div class="grid grid-cols-2 gap-2">
+          <button onclick="executeClearRecords()" class="rpg-cmd py-2.5 px-2 min-h-[44px] text-xs font-bold text-red-400 border-red-400">
+            <span class="cursor-arrow">▶</span> はい（消去する）
+          </button>
+          <button onclick="closeModal('modal-reset')" class="rpg-cmd py-2.5 px-2 min-h-[44px] text-xs text-white">
+            <span class="cursor-arrow">▶</span> いいえ
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- =================================================================
+       JavaScript ゲームエンジン
+       ================================================================= -->
+  <script>
+
+/* =================================================================
+   0. 8ビット ゆるめLo-Fi BGM ＆ 効果音エンジン（Web Audio API）
+   ================================================================= */
+const RetroAudio=(()=>{
+  const STORAGE_KEY='jg_audio_v1';
+  let cfg={muted:false,bgmOn:true,seOn:true,bgmVol:35,seVol:55};
+  try{
+    const saved=JSON.parse(localStorage.getItem(STORAGE_KEY)||'null');
+    if(saved&&typeof saved==='object')cfg=Object.assign(cfg,saved);
+  }catch(e){}
+
+  let ctx=null;
+  let masterGain=null;
+  let bgmFilter=null;
+  let bgmGain=null;
+  let seGain=null;
+
+  let curScene='title';
+  let stepIdx=0;
+  let timerId=null;
+  let nextNoteTime=0;
+  let isUnlocked=false;
+  let lastSeAt=0;
+
+  const TRACK_NAMES={
+    title:'放課後のプロローグ（タイトル）',
+    study:'夜ふけの自習室 Lo-Fi（日常）',
+    event:'ひとやすみティータイム（出来事）',
+    exam:'静かなる決戦（入試本番）',
+    result_win:'桜咲くファンファーレ（合格）',
+    result_lose:'夕暮れの帰り道（お疲れさま）'
+  };
+
+  // MIDIノート番号 -> 周波数(Hz)
+  const mtof=m=>440*Math.pow(2,(m-69)/12);
+
+  // ゆるめ8bit BGMシーケンス定義（16ステップ = 4拍 / 32ステップ = 8拍ループ）
+  // すべて耳に優しい音域・テンポで構成
+  const TRACKS={
+    // タイトル・診断・準備画面（BPM 78・Fメジャーの温かく懐かしいアルペジオ）
+    title:{
+      bpm:78,
+      steps:32,
+      // 32ステップ分のメロディ（nullは休符）
+      lead:[
+        69,null,72,null, 76,null,74,72, 69,null,null,null, 67,null,69,null,
+        72,null,74,null, 76,null,79,76, 74,null,null,null, null,null,72,null
+      ],
+      // 優しいオルゴール風アルペジオ（16分音符ではなく8分音符でゆったり）
+      arp:[
+        65,69,72,76, 64,67,71,74, 62,65,69,72, 60,64,67,71,
+        58,62,65,69, 57,60,64,67, 55,58,62,65, 60,65,67,70
+      ],
+      // 温かい三角波ベース（4ステップ＝1拍ごと）
+      bass:[
+        41,null,null,41, 40,null,null,40, 38,null,null,38, 36,null,null,36,
+        34,null,null,34, 33,null,null,33, 31,null,null,31, 36,null,36,null
+      ],
+      hat:[0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,0],
+      kick:[1,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,1,0]
+    },
+
+    // 通常勉強・育成画面（BPM 72・夜ふけの自習室 Lo-Fi チルの王道コード進行）
+    study:{
+      bpm:72,
+      steps:32,
+      lead:[
+        null,null,76,null, 74,null,72,null, 69,null,null,null, 67,null,69,null,
+        72,null,null,74, 72,null,69,null, 67,null,null,null, null,null,null,null
+      ],
+      arp:[
+        65,69,72,76, 64,68,71,76, 57,60,64,67, 58,62,65,69,
+        65,69,72,76, 65,68,72,74, 64,67,71,74, 60,64,67,71
+      ],
+      bass:[
+        41,null,null,45, 40,null,null,44, 45,null,null,43, 46,null,48,null,
+        41,null,null,45, 41,null,null,44, 40,null,null,45, 38,null,43,null
+      ],
+      hat:[0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,1, 0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,0],
+      kick:[1,0,0,0, 0,0,1,0, 1,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,1,0, 1,0,0,0, 0,0,1,0]
+    },
+
+    // イベント発生中・模試返却票モーダル（BPM 84・軽やかでほっとするティータイム風）
+    event:{
+      bpm:84,
+      steps:32,
+      lead:[
+        74,null,71,null, 67,null,69,71, 72,null,69,null, 66,null,null,null,
+        74,null,76,null, 74,null,71,67, 69,null,71,null, 67,null,null,null
+      ],
+      arp:[
+        67,71,74,78, 66,69,74,78, 64,67,72,76, 62,66,69,72,
+        67,71,74,78, 64,67,71,74, 64,67,72,76, 62,67,69,72
+      ],
+      bass:[
+        43,null,50,null, 47,null,54,null, 45,null,52,null, 42,null,50,null,
+        43,null,50,null, 40,null,47,null, 45,null,52,null, 42,null,43,null
+      ],
+      hat:[0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,0],
+      kick:[1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0]
+    },
+
+    // 入試本番・出願・共テ（BPM 88・静かで集中感のあるマイナーオスティナート）
+    exam:{
+      bpm:88,
+      steps:32,
+      lead:[
+        69,null,null,72, 74,null,72,null, 69,null,67,null, 64,null,null,null,
+        65,null,67,null, 69,null,72,null, 71,null,69,null, 69,null,null,null
+      ],
+      arp:[
+        57,64,69,72, 57,64,69,72, 53,60,65,69, 55,62,67,71,
+        57,64,69,72, 53,60,65,69, 52,59,64,68, 57,64,69,72
+      ],
+      bass:[
+        45,null,45,null, 45,null,43,null, 41,null,41,null, 43,null,43,null,
+        45,null,45,null, 41,null,41,null, 40,null,40,null, 45,null,43,null
+      ],
+      hat:[1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,1],
+      kick:[1,0,0,0, 0,0,1,0, 1,0,0,0, 0,0,1,0, 1,0,0,0, 0,0,1,0, 1,0,0,0, 0,0,1,0]
+    },
+
+    // 合格クリア！エンディング（BPM 92・明るく晴れやかな凱旋ループ）
+    result_win:{
+      bpm:92,
+      steps:32,
+      lead:[
+        72,null,76,null, 79,null,81,79, 76,null,null,72, 74,null,76,null,
+        77,null,76,null, 74,null,72,null, 74,null,79,null, 72,null,null,null
+      ],
+      arp:[
+        60,64,67,72, 60,64,67,72, 57,60,64,69, 55,59,62,67,
+        53,57,60,65, 60,64,67,72, 55,59,62,67, 60,64,67,72
+      ],
+      bass:[
+        48,null,55,null, 48,null,55,null, 45,null,52,null, 43,null,50,null,
+        41,null,48,null, 48,null,55,null, 43,null,50,null, 48,null,55,null
+      ],
+      hat:[0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,0],
+      kick:[1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,1,0]
+    },
+
+    // 全入・お疲れさまエンディング（BPM 70・優しく寄り添う夕暮れバラード）
+    result_lose:{
+      bpm:70,
+      steps:32,
+      lead:[
+        67,null,69,null, 72,null,71,null, 69,null,null,null, 64,null,null,null,
+        65,null,67,null, 69,null,67,null, 62,null,64,null, 60,null,null,null
+      ],
+      arp:[
+        60,64,67,72, 59,62,67,71, 57,60,64,69, 55,59,64,67,
+        53,57,60,65, 52,55,60,64, 50,53,57,62, 48,52,55,60
+      ],
+      bass:[
+        48,null,null,null, 47,null,null,null, 45,null,null,null, 40,null,null,null,
+        41,null,null,null, 40,null,null,null, 38,null,null,null, 36,null,null,null
+      ],
+      hat:[0,0,0,0, 0,0,1,0, 0,0,0,0, 0,0,1,0, 0,0,0,0, 0,0,1,0, 0,0,0,0, 0,0,1,0],
+      kick:[1,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0]
+    }
+  };
+
+  function saveCfg(){
+    try{localStorage.setItem(STORAGE_KEY,JSON.stringify(cfg))}catch(e){}
+  }
+
+  function ensureCtx(){
+    if(!ctx){
+      const AC=window.AudioContext||window.webkitAudioContext;
+      if(!AC)return null;
+      ctx=new AC();
+      masterGain=ctx.createGain();
+      masterGain.gain.value=cfg.muted?0:1;
+      masterGain.connect(ctx.destination);
+
+      // BGM専用ローパスフィルター（耳障りな高周波を丸めて「ゆるめ」な質感に）
+      bgmFilter=ctx.createBiquadFilter();
+      bgmFilter.type='lowpass';
+      bgmFilter.frequency.value=1950;
+      bgmFilter.Q.value=0.65;
+
+      bgmGain=ctx.createGain();
+      bgmGain.gain.value=cfg.bgmOn?(cfg.bgmVol/100)*0.42:0;
+      bgmFilter.connect(bgmGain);
+      bgmGain.connect(masterGain);
+
+      seGain=ctx.createGain();
+      seGain.gain.value=cfg.seOn?(cfg.seVol/100)*0.55:0;
+      seGain.connect(masterGain);
+    }
+    if(ctx.state==='suspended'){
+      ctx.resume().catch(()=>{});
+    }
+    return ctx;
+  }
+
+  function syncGains(){
+    if(ctx&&masterGain&&bgmGain&&seGain){
+      const now=ctx.currentTime;
+      masterGain.gain.setTargetAtTime(cfg.muted?0:1,now,0.02);
+      bgmGain.gain.setTargetAtTime(cfg.bgmOn?(cfg.bgmVol/100)*0.42:0,now,0.03);
+      seGain.gain.setTargetAtTime(cfg.seOn?(cfg.seVol/100)*0.55:0,now,0.02);
+    }
+    syncUI();
+  }
+
+  function syncUI(){
+    const btnTop=document.getElementById('btn-sound-toggle');
+    if(btnTop){
+      const active=!cfg.muted&&(cfg.bgmOn||cfg.seOn);
+      btnTop.textContent=active?'♪ON':'♪OFF';
+      btnTop.className='rpg-cmd text-[11px] sm:text-xs px-2 py-1.5 min-h-[38px] shrink-0 '+(active?'text-emerald-300 border-emerald-300':'text-neutral-400 border-neutral-600');
+    }
+    const bBgm=document.getElementById('btn-cfg-bgm');
+    if(bBgm){
+      bBgm.textContent='▶ BGM：'+(cfg.bgmOn?'ON':'OFF');
+      bBgm.className='rpg-cmd py-2.5 px-2 min-h-[44px] font-bold '+(cfg.bgmOn?'text-emerald-300 border-emerald-300':'text-neutral-400 border-neutral-600');
+    }
+    const bSe=document.getElementById('btn-cfg-se');
+    if(bSe){
+      bSe.textContent='▶ 効果音：'+(cfg.seOn?'ON':'OFF');
+      bSe.className='rpg-cmd py-2.5 px-2 min-h-[44px] font-bold '+(cfg.seOn?'text-sky-300 border-sky-300':'text-neutral-400 border-neutral-600');
+    }
+    const lBgm=document.getElementById('lbl-bgm-vol');
+    if(lBgm)lBgm.textContent=cfg.bgmVol+'%';
+    const rBgm=document.getElementById('rng-bgm-vol');
+    if(rBgm)rBgm.value=cfg.bgmVol;
+
+    const lSe=document.getElementById('lbl-se-vol');
+    if(lSe)lSe.textContent=cfg.seVol+'%';
+    const rSe=document.getElementById('rng-se-vol');
+    if(rSe)rSe.value=cfg.seVol;
+
+    const lTrack=document.getElementById('lbl-current-bgm');
+    if(lTrack)lTrack.textContent=TRACK_NAMES[curScene]||curScene;
+  }
+
+  // BGM単音発音（ソフトエンベロープ）
+  function trigVoice(freq,time,dur,type,peak,dest){
+    if(!ctx||!freq)return;
+    const osc=ctx.createOscillator();
+    const g=ctx.createGain();
+    osc.type=type;
+    osc.frequency.setValueAtTime(freq,time);
+
+    const atk=Math.min(0.025,dur*0.2);
+    const rel=Math.min(0.14,dur*0.45);
+    g.gain.setValueAtTime(0.0001,time);
+    g.gain.linearRampToValueAtTime(peak,time+atk);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.0002,peak*0.45),time+Math.max(atk+0.01,dur-rel));
+    g.gain.exponentialRampToValueAtTime(0.0001,time+dur+0.02);
+
+    osc.connect(g);
+    g.connect(dest);
+    osc.start(time);
+    osc.stop(time+dur+0.03);
+  }
+
+  // Lo-Fiブラシハイハット（極小ノイズ）
+  function trigBrush(time,dest){
+    if(!ctx)return;
+    const len=Math.floor(ctx.sampleRate*0.032);
+    const buf=ctx.createBuffer(1,len,ctx.sampleRate);
+    const data=buf.getChannelData(0);
+    for(let i=0;i<len;i++)data[i]=(Math.random()*2-1)*Math.exp(-i/(len*0.35));
+
+    const src=ctx.createBufferSource();
+    src.buffer=buf;
+    const hp=ctx.createBiquadFilter();
+    hp.type='bandpass';
+    hp.frequency.value=3200;
+    hp.Q.value=1.2;
+
+    const g=ctx.createGain();
+    g.gain.setValueAtTime(0.045,time);
+    g.gain.exponentialRampToValueAtTime(0.0001,time+0.032);
+
+    src.connect(hp);
+    hp.connect(g);
+    g.connect(dest);
+    src.start(time);
+  }
+
+  // ソフトサブキック
+  function trigKick(time,dest){
+    if(!ctx)return;
+    const osc=ctx.createOscillator();
+    const g=ctx.createGain();
+    osc.type='sine';
+    osc.frequency.setValueAtTime(105,time);
+    osc.frequency.exponentialRampToValueAtTime(46,time+0.075);
+
+    g.gain.setValueAtTime(0.16,time);
+    g.gain.exponentialRampToValueAtTime(0.0001,time+0.085);
+
+    osc.connect(g);
+    g.connect(dest);
+    osc.start(time);
+    osc.stop(time+0.09);
+  }
+
+  function scheduleStep(step,time,stepDur,tr){
+    // 1. ベース（丸みのある三角波）
+    const bNote=tr.bass[step];
+    if(bNote!=null){
+      trigVoice(mtof(bNote),time,stepDur*2.6,'triangle',0.24,bgmFilter);
+    }
+    // 2. アルペジオ／コード伴奏（オルゴール風三角波）
+    const aNote=tr.arp[step];
+    if(aNote!=null){
+      trigVoice(mtof(aNote),time,stepDur*1.45,'triangle',0.11,bgmFilter);
+    }
+    // 3. メロディ（温かみのあるソフト矩形波＋三角波レイヤー）
+    const lNote=tr.lead[step];
+    if(lNote!=null){
+      // 後続の休符数を数えて自然な音価にする
+      let hold=1;
+      for(let k=1;k<6;k++){
+        if(tr.lead[(step+k)%tr.steps]==null)hold++;
+        else break;
+      }
+      const noteDur=stepDur*Math.min(hold,3.2)*0.9;
+      trigVoice(mtof(lNote),time,noteDur,'square',0.065,bgmFilter);
+      trigVoice(mtof(lNote),time,noteDur,'triangle',0.10,bgmFilter);
+    }
+    // 4. Lo-Fi リズム（主張しすぎない小さなブラシ＆キック）
+    if(tr.hat[step])trigBrush(time,bgmFilter);
+    if(tr.kick[step])trigKick(time,bgmFilter);
+  }
+
+  function scheduler(){
+    if(!ctx||ctx.state!=='running'||cfg.muted||!cfg.bgmOn)return;
+    const tr=TRACKS[curScene]||TRACKS.title;
+    // 1ステップ = 8分音符（BPMの半分）でゆったり刻む
+    const stepDur=(60/tr.bpm)/2;
+    if(nextNoteTime<ctx.currentTime)nextNoteTime=ctx.currentTime+0.03;
+    while(nextNoteTime<ctx.currentTime+0.18){
+      scheduleStep(stepIdx,nextNoteTime,stepDur,tr);
+      nextNoteTime+=stepDur;
+      stepIdx=(stepIdx+1)%tr.steps;
+    }
+  }
+
+  function startLoop(){
+    if(timerId)return;
+    timerId=setInterval(scheduler,55);
+  }
+
+  // 8ビット効果音（SE）発音ヘルパー
+  function toneSE(freq,delay,dur,type='square',vol=0.22,slideTo=null){
+    const c=ensureCtx();
+    if(!c||cfg.muted||!cfg.seOn)return;
+    const t=c.currentTime+delay;
+    const osc=c.createOscillator();
+    const g=c.createGain();
+    osc.type=type;
+    osc.frequency.setValueAtTime(freq,t);
+    if(slideTo)osc.frequency.exponentialRampToValueAtTime(slideTo,t+dur);
+
+    g.gain.setValueAtTime(0.0001,t);
+    g.gain.linearRampToValueAtTime(vol,t+0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+
+    osc.connect(g);
+    g.connect(seGain);
+    osc.start(t);
+    osc.stop(t+dur+0.015);
+  }
+
+  function playSE(name,force=false){
+    const now=performance.now();
+    // 固有SEが鳴った直後の汎用tap音重複を防止
+    if(name==='tap'&&!force&&(now-lastSeAt)<75)return;
+    if(name!=='tap')lastSeAt=now;
+
+    const c=ensureCtx();
+    if(!c||cfg.muted||!cfg.seOn)return;
+
+    switch(name){
+      case 'tap':
+        toneSE(660,0,0.038,'triangle',0.16,880);
+        break;
+      case 'decide':
+        toneSE(523.25,0,0.065,'square',0.14);
+        toneSE(783.99,0.055,0.095,'square',0.14);
+        break;
+      case 'cancel':
+        toneSE(440,0,0.06,'triangle',0.18);
+        toneSE(329.63,0.05,0.09,'triangle',0.18);
+        break;
+      case 'gacha':
+        [523.25,659.25,783.99,987.77,1046.5,1318.5,1567.98].forEach((f,idx)=>{
+          toneSE(f,idx*0.042,0.075,'square',0.13);
+          toneSE(f,idx*0.042,0.09,'triangle',0.15);
+        });
+        break;
+      case 'step':
+        toneSE(392,0,0.045,'triangle',0.16);
+        toneSE(523.25,0.045,0.055,'triangle',0.16);
+        break;
+      case 'event':
+        toneSE(880,0,0.06,'square',0.14);
+        toneSE(1318.5,0.055,0.12,'square',0.14);
+        break;
+      case 'good':
+        [523.25,659.25,783.99,1046.5].forEach((f,idx)=>{
+          toneSE(f,idx*0.055,0.11,'triangle',0.20);
+          toneSE(f,idx*0.055,0.09,'square',0.10);
+        });
+        break;
+      case 'bad':
+        toneSE(311.13,0,0.09,'triangle',0.20,277.18);
+        toneSE(261.63,0.085,0.14,'triangle',0.20,220);
+        break;
+      case 'mock_good':
+        [587.33,739.99,880,1174.66].forEach((f,idx)=>{
+          toneSE(f,idx*0.065,0.14,'square',0.13);
+          toneSE(f,idx*0.065,0.15,'triangle',0.18);
+        });
+        break;
+      case 'mock_mid':
+        [440,554.37,659.25].forEach((f,idx)=>{
+          toneSE(f,idx*0.07,0.11,'triangle',0.19);
+        });
+        break;
+      case 'mock_low':
+        toneSE(349.23,0,0.10,'triangle',0.19);
+        toneSE(293.66,0.09,0.15,'triangle',0.19);
+        break;
+      case 'diag_done':
+        [587.33,739.99,880,1174.66].forEach((f,idx)=>{
+          toneSE(f,idx*0.06,0.13,'triangle',0.21);
+        });
+        break;
+      case 'pass':
+        // ドラクエ風レベルアップ／合格ファンファーレ
+        [
+          [392.00,0.00,0.09],
+          [523.25,0.09,0.09],
+          [659.25,0.18,0.09],
+          [783.99,0.27,0.22],
+          [659.25,0.52,0.10],
+          [783.99,0.64,0.38]
+        ].forEach(([f,d,du])=>{
+          toneSE(f,d,du,'square',0.14);
+          toneSE(f,d,du+0.03,'triangle',0.19);
+        });
+        break;
+      case 'fail':
+        [
+          [329.63,0.00,0.14],
+          [311.13,0.14,0.14],
+          [293.66,0.28,0.14],
+          [261.63,0.42,0.32]
+        ].forEach(([f,d,du])=>{
+          toneSE(f,d,du,'triangle',0.21);
+        });
+        break;
+    }
+  }
+
+  function setScene(scene){
+    if(!TRACKS[scene])scene='title';
+    if(curScene!==scene){
+      curScene=scene;
+      stepIdx=0;
+      if(ctx)nextNoteTime=ctx.currentTime+0.05;
+      syncUI();
+    }
+  }
+
+  function previewScene(scene){
+    ensureCtx();
+    if(cfg.muted)cfg.muted=false;
+    if(!cfg.bgmOn)cfg.bgmOn=true;
+    saveCfg();
+    setScene(scene);
+    syncGains();
+    playSE('tap',true);
+  }
+
+  function toggleMute(){
+    ensureCtx();
+    cfg.muted=!cfg.muted;
+    saveCfg();
+    syncGains();
+    if(!cfg.muted)playSE('decide',true);
+  }
+
+  function toggleBgm(){
+    ensureCtx();
+    cfg.bgmOn=!cfg.bgmOn;
+    if(cfg.bgmOn&&cfg.muted)cfg.muted=false;
+    saveCfg();
+    syncGains();
+    playSE('tap',true);
+  }
+
+  function toggleSe(){
+    ensureCtx();
+    cfg.seOn=!cfg.seOn;
+    if(cfg.seOn&&cfg.muted)cfg.muted=false;
+    saveCfg();
+    syncGains();
+    if(cfg.seOn)playSE('decide',true);
+  }
+
+  function setBgmVol(v){
+    ensureCtx();
+    cfg.bgmVol=Math.max(0,Math.min(100,Number(v)||0));
+    saveCfg();
+    syncGains();
+  }
+
+  function setSeVol(v){
+    ensureCtx();
+    cfg.seVol=Math.max(0,Math.min(100,Number(v)||0));
+    saveCfg();
+    syncGains();
+  }
+
+  // 初回ユーザー操作でWeb Audioを自動アンロック＆BGM開始
+  function unlock(){
+    if(isUnlocked&&ctx&&ctx.state==='running')return;
+    const c=ensureCtx();
+    if(c){
+      isUnlocked=true;
+      startLoop();
+    }
+  }
+
+  ['pointerdown','touchstart','keydown'].forEach(ev=>{
+    window.addEventListener(ev,unlock,{passive:true});
+  });
+
+  // すべてのRPGボタン操作に軽快な8bitタップ音を自動付与
+  document.addEventListener('click',e=>{
+    const btn=e.target.closest('button, input[type="checkbox"], input[type="radio"]');
+    if(!btn||btn.disabled)return;
+    if(btn.id==='btn-sound-toggle')return;
+    playSE('tap');
+  },true);
+
+  // バックグラウンド移行時は一時停止し、復帰時に再開
+  document.addEventListener('visibilitychange',()=>{
+    if(!ctx)return;
+    if(document.hidden){
+      ctx.suspend().catch(()=>{});
+    }else if(!cfg.muted){
+      ctx.resume().catch(()=>{});
+      nextNoteTime=ctx.currentTime+0.05;
+    }
+  });
+
+  setTimeout(syncUI,0);
+
+  return{
+    setScene,
+    previewScene,
+    playSE,
+    toggleMute,
+    toggleBgm,
+    toggleSe,
+    setBgmVol,
+    setSeVol,
+    syncUI
+  };
+})();
+
+const $=s=>document.querySelector(s),cl=v=>v<0?0:v>100?100:v;
+const RR=(s,t,k)=>{let x=(Math.imul(s|0,374761393)+Math.imul(t|0,668265263)+Math.imul(k|0,2246822519))|0;x=Math.imul(x^x>>>13,1274126177);x^=x>>>16;x=Math.imul(x,2246822507);x^=x>>>13;return(x>>>0)/4294967296};
+const G=(s,t,k)=>Math.sqrt(-2*Math.log(RR(s,t,k)+1e-9))*Math.cos(6.2832*RR(s,t,k+1));
+const CO=['#facc15','#c084fc','#38bdf8','#a3a3a3'],RA=['SSR','SR','R','N','UR','UR'];
+
+/* =================================================================
+   1. 生まれガチャ：SSR確率1% & 地頭(TAL)が偏差値に最強に効くバランス
+   ================================================================= */
+const FAM=[['教育一家の超裕福な家',4],['裕福で教育熱心な家',2.5],['ごく普通の家庭',0],['経済的にきびしい家',-2],['両親が東大卒の家',6]];
+const TWN=[['教育環境トップの都心',3],['塾も学校も充実した街',1.5],['ふつうの地方都市',0],['塾が遠い田舎',-2],['日本屈指の環境都市',4.5]];
+const TAL=[['神童レベルの地頭',1.75,13.5],['覚えが早い',1.35,6.5],['ふつうの吸収力',1.0,0],['ゆっくり型',0.8,-3.5],['算数オリンピック金レベル（理系科目が伸びる）',2,26,'sci'],['言語学オリンピック金レベル（文系科目が伸びる）',2,26,'lang']];
+const AFF={sci:['math','sci','info'],lang:['eng','jpn','soc']};
+const AMAX=S=>S.b&&S.b.k>=4?100:82;
+const affMul=(S,k)=>{const a=TAL[S.b.k][3],q=S.sk?(S.sk.s===k?1.3:S.sk.w===k?.8:1):1;return q*(a?(AFF[a].includes(k)?1.35:.95):1)};
+const roll=(r,k)=>r<.001?(k==='k'?(r<.0005?4:5):4):r<.01?0:r<.15?1:r<.5?2:3;
+const bd=b=>50+FAM[b.f][1]+TWN[b.t][1]+TAL[b.k][2],st0=(b,si)=>({a:bd(b)-(si==2?5:2),p:bd(b)});
+
+/* =================================================================
+   2. 全61大学・552学部・学科データベース（偏差値目安・国公立/私立・文理区分）
+   ================================================================= */
+let PSX='m',SXA=null;
+const cvS=s=>Math.round(78-0.75*(72-s));
+/* 学校データ：名前=ゲーム偏差値 / 名前:駿台値[/女子値] 、末尾 |m=男子校 |f=女子校（無印は共学） */
+const RS=(str,grp)=>str.split(',').map((x,o)=>{const q=x.split('|'),sx=q[1]||'c';let n,dM,dF=null,sM=null,sF=null;if(q[0].includes('=')){const p=q[0].split('=');n=p[0];dM=+p[1]}else{const p=q[0].split(':'),v=p[1].split('/');n=p[0];sM=+v[0];sF=v[1]?+v[1]:null;dM=cvS(sM);dF=sF!=null?cvS(sF):null}return[n,dM,{uni:n,dept:'',isNat:false,bunri:'共',grp,sx,dM,dF,sM,sF,o}]});
+const FBK=(n,grp,sx)=>[n,40,{uni:n,dept:'',isNat:grp==='公立',bunri:'共',grp,sx:'c',dM:40,dF:null,sM:null,sF:null,o:99999}];
+
+const SCH=[
+  RS('開成中=72|m,筑波大附属駒場中=72|m,灘中=72|m,桜蔭中=71|f,渋谷教育学園幕張中=71,駒場東邦中=70|m,聖光学院中=69|m,麻布中=69|m,栄光学園中=68|m,東大寺学園中=68|m,西大和学園中=67,女子学院中=67|f,洛南高附属中=67,甲陽学院中=67|m,東海中=66|m,久留米大附設中=66,筑波大附属中=66,早稲田中=66|m,慶應義塾普通部=66|m,浅野中=66|m,豊島岡女子学園中=66|f,海城中=65|m,武蔵中=65|m,早稲田実業中等部=65,雙葉中=65|f,慶應義塾中等部=65,芝中=64|m,明大明治中=62,本郷中=61|m,吉祥女子中=61|f,広尾学園中=60,頌栄女子学院中=60|f,攻玉社中=59|m,四天王寺中=59|f,巣鴨中=59|m,世田谷学園中=58|m,立教池袋中=58|m,青山学院中等部=57,城北中=56|m,中央大附属中=55,清風南海中=55,法政大中=54,成蹊中=52,獨協中=50|m,日大第一中=49,安田学園中=48,八王子学園八王子中=46,郁文館中=44,文京学院大女子中=43|f,東京成徳大中=42,渋谷教育学園渋谷中=68,慶應義塾湘南藤沢中等部=64,早稲田大学高等学院中学部=64,都立小石川中等教育学校=63,お茶の水女子大附属中=61|f,東京学芸大附属世田谷中=61,東京学芸大附属小金井中=59,東京学芸大附属大泉中=57,東京学芸大附属竹早中=56,洗足学園中=64|f,フェリス女学院中=62|f,鴎友学園女子中=61|f,浦和明の星女子中=61|f,栄東中=62,市川中=64,昭和学院秀英中=60,東邦大東邦中=61,大阪星光学院中=65|m,六甲学院中=62|m,神戸女学院中=64|f,洛星中=64|m,白陵中=63,ラ・サール中=66|m,愛光中=63,広島学院中=63|m,青雲中=62,海陽中等教育学校=62|m,滝中=60,南山中（男子部）=60|m,岡山白陵中=61,高槻中=60|m,帝塚山中=60,智辯学園和歌山中=60,関西学院中学部=57,同志社中=56,立命館中=56,須磨学園中=57,開明中=56,淳心学院中=56|m,白百合学園中=58|f,田園調布学園中=59|f,立教女学院中=58|f,大妻中=58|f,聖心女子学院中=57|f,学習院女子中等科=56|f,学習院中等科=54|m,暁星中=56|m,桐朋中=58|m,高輪中=58|m,東京都市大付属中=57,東京農大第一中=57,三田国際科学学園中=57,広尾学園小石川中=59,明大中野中=56|m,明大中野八王子中=54,成城学園中=55,成城中=54|m,桐朋女子中=50|f,山脇学園中=55|f,昭和女子大附属昭和中=55|f,東京女学館中=54|f,三輪田学園中=54|f,恵泉女学園中=52|f,香蘭女学校中=52|f,普連土学園中=52|f,共立女子中=50|f,実践女子学園中=52|f,國學院久我山中=52,都立桜修館中等教育学校=58,都立両国高附属中=58,都立白鴎高附属中=55,都立三鷹中等教育学校=54,都立武蔵高附属中=54,都立大泉高附属中=54,都立南多摩中等教育学校=53,都立立川国際中等教育学校=53,都立富士高附属中=53,区立九段中等教育学校=52,横浜市立サイエンスフロンティア高附属中=58,横浜市立南高附属中=54,川崎市立川崎高附属中=50,県立相模原中等教育学校=49,逗子開成中=57|m,鎌倉学園中=55|m,サレジオ学院中=57|m,中大横浜中=55,法政大第二中=55,桐蔭学園中等教育学校=55,神奈川大附属中=54,公文国際学園中等部=52,横浜雙葉中=57|f,県立千葉中=62,県立東葛飾中=59,さいたま市立浦和中=59,さいたま市立大宮国際中等教育学校=55,県立伊奈学園中=50,開智中=56,開智所沢中等教育学校=55,大宮開成中=57,淑徳与野中=55|f,芝浦工大柏中=54,専修大松戸中=56,麗澤中=50,江戸川学園取手中=56,茗溪学園中=57,土浦日大中等教育学校=50,県立仙台二華中=56,南山中（女子部）=60|f','中学・高校').concat([FBK('地元の公立中学','公立')]),
+  RS('灘高:72.0|m,筑波大附属駒場高:72.0|m,慶應義塾女子高:70.4|f,開成高:69.3|m,渋谷教育学園幕張高:67.4/69.5,慶應志木高:67.0|m,早稲田実業高:66.4,筑波大附属高:66.4/68.4,久留米大附設高:65.7,早大本庄高等学院:65.7,早稲田大学高等学院:65.3|m,慶應義塾高:64.5|m,都立日比谷高:64.5,県立横浜翠嵐高:64.4,大阪星光学院高:64.1|m,ラ・サール高:64.0|m,西大和学園高:63.4/65.5,東京学芸大附属高:63.3,市川高:63.1/64.1,府立北野高:62.7,愛光高:62.6,栄東高（東・医）:62.2/63.5,都立西高:62.1,お茶の水女子大附属高:62.0|f,広島大附属高:61.4,広島大附属福山高:61.0,府立天王寺高:60.4,県立熊本高:60.3,府立茨木高:60.1,市立堀川高:60.0/61.0,洛南高（空）:60.0/61.2,県立千葉高:60.0,明大明治高:59.9/61.5,県立湘南高:59.7,大阪教育大附属池田高:59.6,県立大宮高:59.5,県立膳所高:59.5,青雲高:59.5,国際基督教大学高:59.0/60.4,慶應湘南藤沢高:59.0,東海高:59.0|m,立教新座高:58.9|m,金沢大附属高:58.9,県立浦和高:58.8|m,都立国立高:58.8,市立徳島高:58.7,江戸川学園取手高（医科）:58.6,県立金沢泉丘高:58.5,洛南高（海）:58.4,岡山白陵高:58.0,府立大手前高:58.0,昭和学院秀英高:58.0,県立新潟高:58.0,府立三国丘高:57.9,大阪教育大附属天王寺高:57.8,県立鶴丸高:57.7,桐朋高:57.5|m,白陵高:57.5,県立修猷館高:57.5,栄東高（アルファ）:57.4/58.1,県立水戸第一高:57.4,西武学園文理高（AC）:57.4,県立土浦第一高:57.3,清風南海高:57.2,都立戸山高:57.2,智辯学園和歌山高:57.1,県立大分上野丘高:57.1,県立奈良高:57.0,県立岡崎高:57.0,県立宇都宮高:56.9|m,県立船橋高:56.9,広尾学園高:56.8,道立札幌南高:56.8,帝塚山高（女子英数特進）:56.7|f,川越東高（特待）:56.5|m,県立岐阜高:56.5,県立旭丘高:56.5,開智高（T）:56.5,青山学院高等部:56.5/62.5,淑徳与野高（T類）:56.4|f,須磨学園高（Ⅲ類）:56.4/57.5,巣鴨高:56.3|m,桐蔭学園高（プログレス）:56.2/57.4,県立四日市高:56.2,真和高:56.2,同志社高:56.1,城北高:56.1|m,四天王寺高:56.0|f,明星高（選抜）:56.0|m,清風高（理Ⅲ編入）:56.0|m,県立仙台第二高:56.0,県立浦和第一女子高:56.0|f,県立済々黌高:56.0,道立札幌北高:55.8,県立東葛飾高:55.7,滝高:55.6,県立柏陽高:55.6,県立一宮高:55.5,県立宇都宮女子高:55.5|f,県立富山中部高:55.5,県立長田高:55.5,県立高崎高:55.5|m,県立前橋高:55.4|m,徳島文理高:55.3,県立長野高:55.3,県立高松高:55.3,県立浜松北高:55.2,立命館高:55.1,帝塚山高（男子英数）:55.0|m,府立嵯峨野高:55.0,県立加古川東高:55.0,県立静岡高:55.0,都立立川高:55.0,県立厚木高:54.9,県立甲府南高:54.9,立命館守山高:54.9,川越東高（理数）:54.8|m,県立松本深志高:54.8,県立福岡高:54.8,県立筑紫丘高:54.7,県立川和高:54.6,山手学院高:54.5,土浦日大高（特進）:54.4,清教学園高:54.4,県立横浜サイエンスフロンティア高:54.4,都立八王子東高:54.3,都立国際高:54.3,京都女子高:54.2|f,府立豊中高:54.2,県立姫路西高:54.2,県立横浜緑ヶ丘高:54.2,中大横浜高:54.1,県立千葉東高:54.1,就実高（特進）:54.0,弘学館高:54.0,東京科学大附属科学技術高:54.0,中大杉並高:53.9,國學院久我山高:53.9,朋優学院高:53.9,県立川越高:53.8|m,県立西京高:53.8,関西大倉高:53.7,県立八戸高:53.6,都立青山高:53.6,県立藤島高:53.5,近畿大和歌山高:53.5,桃山学院高:53.4,県立兵庫高:53.4,県立多摩高:53.4,県立甲府第一高:53.4,中央大附属高:53.3,桐光学園高:53.2,県立盛岡第一高:53.2,県立秋田高:53.2,中央大学高:53.1/56.9,奈良学園高:53.1,鎌倉学園高:53.1|m,大阪女学院高:53.0|f,専修大松戸高:53.0,早稲田佐賀高:53.0,比叡山高:53.0,県立宮崎西高:53.0,県立希望ヶ丘高:53.0,県立神戸高:53.0,市立浦和高:52.9,県立春日部高:52.9|m,福岡大大濠高:52.9,県立安積高:52.8,西南学院高:52.8,西武学園文理高（SC）:52.8,近畿大附属高（Ｓ文理）:52.8,八千代松陰高（IGS）:52.7,志學館高（鹿児島）:52.7,芝浦工大柏高:52.7/54.0,明大中野高:52.6|m,星野高（Ⅲ類）:52.6,県立岡山朝日高:52.6,青稜高:52.6,修道高:52.5|m,帝京大学高:52.5,県立相模原高:52.5,茨城高:52.5,作新学院高（英進）:52.4,創価高:52.4,県立光陵高:52.4,大阪桐蔭高:52.2,市立桃山高:52.1,市立西宮高:52.1,県立畝傍高:52.1,札幌光星高:52.0,県立佐倉高:52.0,県立長崎西高:52.0,立命館慶祥高:52.0,開智高（和歌山）:52.0,函館ラ・サール高:51.9|m,大阪女学院高（文系英語）:51.9|f,同志社国際高:51.8,県立平塚江南高:51.8,春日部共栄高（選抜）:51.7,理数インターナショナル高:51.7,県立山口高:51.7,県立桐蔭高:51.7,茗溪学園高:51.7,開明高:51.7,明誠学院高:51.6,江戸川学園取手高（難関）:51.6,県立佐賀西高:51.6,県立薬園台高:51.6,学習院高等科:51.5|m,錦城高:51.4,雲雀丘学園高:51.4,淑徳高:51.3,利晶学園高:51.2,城北埼玉高:51.2|m,県立川越女子高:51.2|f,県立松山東高:51.2,八王子学園八王子高:51.1,法政大第二高:51.1/53.2,都立小山台高:51.1,県立神奈川総合高:51.0,土佐高:50.9,常総学院高:50.9,日大習志野高:50.9,県立横須賀高:50.9,都立新宿高:50.9,法政大国際高:50.8,県立前橋女子高:50.8|f,県立広島高:50.7,立命館宇治高:50.7,県立木更津高:50.6,桐蔭学園高（アドバンス）:50.5,西武学園文理高（デュアル）:50.5,関西学院高等部:50.5,都立国分寺高:50.4,拓大第一高:50.2,名古屋高:50.0|m,大谷高（京都）:50.0,宇都宮短大附属高:50.0,東山高:50.0|m,江戸川女子高:50.0|f,都立竹早高:50.0,都立駒場高:50.0,駿台甲府高:50.0,県立所沢北高:49.9,佐野日大高:49.8,明星高（文理）:49.8|m,県立長生高:49.7,市立千葉高:49.6,県立越谷北高:49.6,如水館高:49.5,成蹊高:49.5/52.0,県立松江北高:49.5,大分東明高:49.4,開智高（S12）:49.4,関西大第一高:49.4,明大八王子高:49.3,愛知高:49.2,県立不動岡高:49.2,麗澤高:49.2,法政大高:49.1,明大世田谷高:49.0,県立米子東高:49.0,県立高崎女子高:49.0|f,桐朋女子高:48.9|f,志学館高:48.8,新潟明訓高:48.7,本庄東高:48.7,東京都市大等々力高:48.7,淑徳巣鴨高:48.7,市原中央高:48.5,県立柏高:48.4,花園高（特進）:48.4,県立八千代高:48.2,県立蕨高:48.2,国府台女子高:48.1|f,都立武蔵野北高:48.1,大宮開成高:48.0,鹿児島実業高:48.0,十文字高:47.9|f,大手前高松高:47.9,川越東高:47.9|m,川越東高（普通）:47.9,日大高:47.6,東京農大第一高:47.4,東京農大第二高:47.2,九州国際大付高:47.0,日大第二高:47.0,滝川高（兵庫）:47.0,筑陽学園高:47.0,長野日大高:47.0,明治学院高:46.9,桜美林高:46.8,県立船橋東高:46.8,佼成学園高:46.7,日大第三高:46.7,日大鶴ヶ丘高:46.7,狭山ヶ丘高:46.7,近畿大附属高（特進）:46.7,成田高:46.6,東洋高:46.6,明治学院東村山高:46.4,早稲田大阪高:46.1,京都橘高:46.0,日本女子大附属高:46.0|f,星野高:46.0,流通経済大柏高:46.0,獨協埼玉高:46.0,追手門学院高:46.0,関西大学高:46.0,静岡学園高:46.0,高知学芸高:46.0,県立開邦高:45.8,聖ウルスラ英智高:45.8,國學院高:45.1,成城学園高:45.1,中京大中京高:45.0,佐久長聖高:45.0,城西大川越高:45.0,岡山学芸館高:45.0,広島新庄高:45.0,日出学園高:45.0,日大藤沢高:45.0,春日部共栄高（特進α）:45.0,本庄第一高:45.0,樹徳高:45.0,水城高:45.0,清真学園高:45.0,盛岡中央高:45.0,米子北斗高:45.0,聖徳学園高:45.0,聖望学園高:45.0,駒込高:44.8,県立高知追手前高:44.5,北里大附属順天高:44.4,都立三田高=61,県立明和高=63,都立狛江高=58,日大三高=57,都立北園高=56,都立府中高=54,都立江戸川高=51,都立葛飾野高=48,都立東村山高=45,都立東久留米総合高=43','中学・高校').concat([FBK('ランク下の高校（全入）','全入')]),
+];
+
+const okSx=(S,s)=>{const x=s[2]&&s[2].sx;return !x||x==='c'||x===((S&&S.sx)||'m')};
+const sxName=s=>s[2].sx==='m'?'男子校':s[2].sx==='f'?'女子校':'共学';
+const sxTag=s=>`<span class="text-[10px] ${s[2].sx==='m'?'text-sky-300':s[2].sx==='f'?'text-pink-300':'text-neutral-400'}">[${sxName(s)}]</span>`;
+function applySex(sx){sx=sx==='f'?'f':'m';if(SXA===sx)return;SXA=sx;PSX=sx;SCH.forEach(l=>{l.forEach(s=>{const m=s[2];s[1]=(sx==='f'&&m.dF!=null)?m.dF:m.dM;m.sun=(sx==='f'&&m.sF!=null)?m.sF:m.sM});l.sort((a,b)=>b[1]-a[1]||(b[2].sun||0)-(a[2].sun||0)||a[2].o-b[2].o)})}
+applySex('m');
+const PZ0=3.4; /* 目安偏差値＝合格可能性80%ライン → 合格率の中心を目安-3.4に */
+
+function getUniMeta(item){
+  const dev=item[1];
+  const meta=item[2]||{isNat:false,bunri:'共'};
+  if(meta.isNat){
+    const ktBorderPct=Math.min(92,Math.max(58,Math.round(64+(dev-48)*1.12)));
+    const secRatio=dev>=65?80:dev>=60?65:dev>=56?50:40;
+    return{isNat:true,ktBorderPct,ashikiriPct:ktBorderPct-9,secRatio,hasKoki:dev<=63,bunri:meta.bunri};
+  }else{
+    const kyoteBorderPct=Math.min(94,Math.max(60,Math.round(68+(dev-48)*1.28)));
+    return{isNat:false,kyoteBorderPct,bunri:meta.bunri};
+  }
+}
+
+const ED={full:['小4から通し人生','中学受験→高校受験',[0,1]],c:['中学受験編','小4〜小6',[0]],h:['高校受験編','中1〜中3',[1]]};
+const JUKU=[[['SAPIX',10],['四谷大塚',8],['日能研',7],['早稲田アカデミー',8],['浜学園・希学園',8],['個別指導・自宅学習',0]],[['早稲田アカデミー',8],['市進学院',6],['栄光ゼミナール',6],['臨海セミナー',5],['ena',5],['馬渕教室',7],['佐鳴予備校',6],['秀英予備校',6],['独学・通信',0]],[['河合塾',8],['駿台予備学校',9],['東進ハイスクール',7],['代々木ゼミナール',6],['Z会',7],['鉄緑会',10],['武田塾・個別指導',5],['宅浪・独学',0]]];
+
+/* =================================================================
+   3. 教科カリキュラム＆週間勉強時間（1時間単位）システム
+   ================================================================= */
+/* 科目選択：[名前,学習時間の重み,伸びやすさ,説明]（共通テスト新課程の選択科目に基づく） */
+const ELEC={
+ bun:{
+  soc:[['日本史',1.25,1,'暗記量が多く時間が必要。私大文系で人気。'],['世界史',1.3,1,'範囲が最も広く時間がかかる。得点源にすれば強い。'],['地理',1,1.05,'理系的な思考も使い、共通テストで取り組みやすい。'],['政治・経済',.8,1.1,'範囲がせまく短期間で仕上げやすい。']],
+  sci:[['物理基礎・化学基礎',1,1,'計算が多め。基礎2科目で受験する。'],['化学基礎・生物基礎',.9,1.05,'暗記中心で仕上げやすい定番の組み合わせ。'],['生物基礎・地学基礎',.8,1.1,'範囲が小さく短時間で得点しやすい。']]
+ },
+ ri:{
+  sci:[['物理・化学',1.1,1.05,'旧帝大・工学部・医学部で最も一般的。伸びれば強い。'],['化学・生物',1.15,1,'医歯薬・農・生命系に多い。暗記量が多い。'],['物理・生物',1.1,1,'組み合わせは大学によって不可の場合あり。'],['生物・地学',.95,1.1,'負担は軽いが受験できる大学が限られる。']],
+  soc:[['地理',.9,1.05,'理系でも選びやすい。'],['日本史',1,1,'暗記量が多め。'],['世界史',1.05,1,'範囲が広い。'],['公共・政治経済',.7,1.1,'最小の負担で済ませたい人向け。']]
+ }
+};
+const elecNext=S=>{if(!S.bunri)return null;const o=S.bunri==='bun'?['soc','sci']:['sci','soc'],e=S.elec||{};return e[o[0]]==null?o[0]:e[o[1]]==null?o[1]:null};
+const elecMul=(S,k)=>{const i=S.elec&&S.elec[k];return i==null||!S.bunri?1:ELEC[S.bunri][k][i][2]};
+function elecWrap(S,r){if(!S.elec||!S.bunri)return r;const o=r.map(c=>{const i=S.elec[c.key],e=i!=null&&ELEC[S.bunri][c.key]&&ELEC[S.bunri][c.key][i];return e?{...c,name:c.name.replace(/（.*/,'')+'（'+e[0]+'）',w:c.w*e[1]}:c});const sw=o.reduce((a,c)=>a+c.w,0);return o.map(c=>({...c,w:c.w/sw}))}
+const BASE_WEEK_HRS=[18,20,24];
+const PACE_WEEK_PRESETS=[
+  [10,18,28,38], // 中学受験: ゆるめ10h, ふつう18h, しっかり28h, 限界まで38h
+  [12,20,30,42], // 高校受験: ゆるめ12h, ふつう20h, しっかり30h, 限界まで42h
+  [14,24,36,48]  // 大学受験: ゆるめ14h, ふつう24h, しっかり36h, 限界まで48h
+];
+
+function getCurriculum(S){return elecWrap(S,getCur0(S))}
+function getCur0(S){
+  if(S.si===0){
+    return[
+      {key:'math',name:'算数',short:'算',w:0.35,maxPts:150},
+      {key:'jpn',name:'国語',short:'国',w:0.30,maxPts:150},
+      {key:'sci',name:'理科',short:'理',w:0.18,maxPts:100},
+      {key:'soc',name:'社会',short:'社',w:0.17,maxPts:100}
+    ];
+  }
+  if(S.si===1){
+    return[
+      {key:'eng',name:'英語',short:'英',w:0.25,maxPts:100},
+      {key:'math',name:'数学',short:'数',w:0.25,maxPts:100},
+      {key:'jpn',name:'国語',short:'国',w:0.20,maxPts:100},
+      {key:'sci',name:'理科',short:'理',w:0.15,maxPts:100},
+      {key:'soc',name:'社会',short:'社',w:0.15,maxPts:100}
+    ];
+  }
+  // 大学受験 (si === 2)
+  if(S.bunri==='bun'){
+    return[
+      {key:'eng',name:'英語',short:'英',w:0.29,maxPts:200},
+      {key:'jpn',name:'国語',short:'国',w:0.23,maxPts:200},
+      {key:'soc',name:'地歴公民',short:'地歴',w:0.22,maxPts:100},
+      {key:'math',name:'数学',short:'数',w:0.14,maxPts:200},
+      {key:'sci',name:'理科基礎',short:'理基',w:0.06,maxPts:100},
+      {key:'info',name:'情報',short:'情報',w:0.06,maxPts:100}
+    ];
+  }
+  if(S.bunri==='ri'){
+    return[
+      {key:'eng',name:'英語',short:'英',w:0.27,maxPts:200},
+      {key:'math',name:'数学',short:'数',w:0.30,maxPts:200},
+      {key:'sci',name:'理科',short:'理',w:0.24,maxPts:200},
+      {key:'jpn',name:'国語',short:'国',w:0.09,maxPts:200},
+      {key:'soc',name:'地歴基礎',short:'地基',w:0.05,maxPts:100},
+      {key:'info',name:'情報',short:'情報',w:0.05,maxPts:100}
+    ];
+  }
+  // 高1 4月〜10月（文理選択前）
+  return[
+    {key:'eng',name:'英語',short:'英',w:0.27,maxPts:200},
+    {key:'math',name:'数学',short:'数',w:0.26,maxPts:200},
+    {key:'jpn',name:'国語',short:'国',w:0.18,maxPts:200},
+    {key:'sci',name:'理科',short:'理',w:0.12,maxPts:200},
+    {key:'soc',name:'地歴公民',short:'地歴',w:0.11,maxPts:100},
+    {key:'info',name:'情報',short:'情報',w:0.06,maxPts:100}
+  ];
+}
+
+function distributeIntHours(totalHrs, weights){
+  const n=weights.length;
+  const raw=weights.map(w=>w*totalHrs);
+  const flr=raw.map(x=>Math.floor(x));
+  let rem=Math.max(0,Math.round(totalHrs)-flr.reduce((a,b)=>a+b,0));
+  const order=raw.map((x,i)=>({i,frac:x-flr[i]})).sort((a,b)=>b.frac-a.frac);
+  for(let k=0;k<rem;k++)flr[order[k%n].i]++;
+  return flr;
+}
+
+function getTotalWeekHrs(S){
+  return(S.subHrs||[]).reduce((a,b)=>a+b,0);
+}
+
+function syncOverallFromSubs(S){
+  const cur=getCurriculum(S);
+  if(!S.subA||S.subA.length!==cur.length)return;
+  let sum=0,wSum=0;
+  cur.forEach((c,i)=>{sum+=S.subA[i]*c.w;wSum+=c.w;});
+  S.a=Math.max(25,Math.min(AMAX(S),sum/(wSum||1)));
+}
+
+function applyPacePreset(paceIdx){
+  if(!S)return;
+  S.pace=paceIdx;
+  const cur=getCurriculum(S);
+  const targetTotal=PACE_WEEK_PRESETS[S.si][paceIdx];
+  const curTotal=getTotalWeekHrs(S);
+  const weights=curTotal>0?S.subHrs.map(h=>h/curTotal):cur.map(c=>c.w);
+  S.subHrs=distributeIntHours(targetTotal,weights);
+  save();
+  Play();
+}
+
+function adjustSubHour(idx,delta){
+  if(!S)return;
+  const curTotal=getTotalWeekHrs(S);
+  const nextVal=(S.subHrs[idx]||0)+delta;
+  if(nextVal<0)return;
+  if(delta>0&&curTotal>=65){showToast('＊ 週間勉強時間は最大65時間までです！');return;}
+  S.subHrs[idx]=nextVal;
+  const newTotal=getTotalWeekHrs(S);
+  const presets=PACE_WEEK_PRESETS[S.si];
+  let bestP=1,bestD=999;
+  presets.forEach((p,i)=>{const d=Math.abs(newTotal-p);if(d<bestD){bestD=d;bestP=i;}});
+  S.pace=bestP;
+  save();
+  Play();
+}
+
+function equalizeSubHours(){
+  if(!S)return;
+  const cur=getCurriculum(S);
+  const total=getTotalWeekHrs(S)||BASE_WEEK_HRS[S.si];
+  S.subHrs=distributeIntHours(total,cur.map(()=>1/cur.length));
+  save();
+  Play();
+}
+
+function optimizeSubHoursForTarget(){
+  if(!S)return;
+  const cur=getCurriculum(S);
+  const total=getTotalWeekHrs(S)||BASE_WEEK_HRS[S.si];
+  const f=SCH[S.si][S.fi||0];
+  const bType=f[2]?.bunri||'共';
+  let weights=cur.map(c=>c.w);
+  if(S.si===2){
+    if(bType==='理'||bType==='医'){
+      weights=cur.map(c=>c.key==='math'?0.34:c.key==='sci'?0.28:c.key==='eng'?0.26:0.04);
+    }else if(bType==='文'){
+      weights=cur.map(c=>c.key==='eng'?0.33:c.key==='jpn'?0.25:c.key==='soc'?0.24:0.06);
+    }
+  }
+  S.subHrs=distributeIntHours(total,weights);
+  save();
+  Play();
+}
+
+/* =================================================================
+   4. 学年別・飛び級対応の模試データベース（4月・6月・9月・11月・1月実施）
+   ================================================================= */
+const MOCK_MONTH_INDICES=[0,2,5,7,9]; // 4月, 6月, 9月, 11月, 1月
+const STAGE_GRADE_NAMES=[['小4','小5','小6'],['中1','中2','中3'],['高1','高2','高3・卒']];
+
+const MOCK_LIST=[
+  [
+    {grade:0,name:'小4 サピックス組み分け診断',diff:3.5,min:65,pop:6800,tag:'小4・難関向け',desc:'小4上位層向けの実力診断テスト。'},
+    {grade:0,name:'小4 四谷大塚 公開組み分け',diff:1.0,min:56,pop:11000,tag:'小4・やや難',desc:'小4標準〜上位層の公開テスト。'},
+    {grade:0,name:'小4 日能研 全国公開模試',diff:-1.0,min:0,pop:13500,tag:'小4・標準',desc:'全国の小4受験生が受ける標準模試。'},
+    {grade:1,name:'小5 サピックスオープン',diff:4.5,min:65,pop:7200,tag:'小5・難関向け',desc:'小5難関中志望者中心の記述模試。'},
+    {grade:1,name:'小5 四谷大塚 志望校判定',diff:1.5,min:56,pop:12500,tag:'小5・やや難',desc:'小5の志望校判定公開テスト。'},
+    {grade:1,name:'小5 日能研 全国公開模試',diff:0.0,min:0,pop:14500,tag:'小5・標準',desc:'小5の全国標準公開模試。'},
+    {grade:2,name:'小6 SAPIX合格力判定オープン',diff:5.0,min:66,pop:7500,isKanmuri:true,tag:'小6・超難関冠',desc:'最難関中志望者限定集団。最もシビアに偏差値が出る。'},
+    {grade:2,name:'小6 四谷大塚 合不合判定テスト',diff:2.0,min:58,pop:15000,tag:'小6・やや難',desc:'首都圏中心の総合判定テスト。'},
+    {grade:2,name:'小6 日能研 全国公開模試',diff:0.0,min:52,pop:16500,tag:'小6・標準',desc:'全国規模の標準公開模試。'},
+    {grade:2,name:'小6 ONETES 合格ONEテスト',diff:-4.0,min:0,pop:22000,tag:'小6・広域出やすい',desc:'幅広い学力層が受験するため偏差値が出やすい。'}
+  ],
+  [
+    {grade:0,name:'中1 駿台学力テスト',diff:4.5,min:70,pop:8500,tag:'中1・難関向け',desc:'難関国私立高を目指す中1向けハイレベル模試。'},
+    {grade:0,name:'中1 SAPIX中学部 公開模試',diff:2.0,min:64,pop:6200,tag:'中1・やや難',desc:'中1上位層向けの応用重視模試。'},
+    {grade:0,name:'中1 進研・全県学力テスト',diff:-2.5,min:0,pop:48000,tag:'中1・広域標準',desc:'幅広い中1生が受ける標準学力テスト。'},
+    {grade:1,name:'中2 駿台学力テスト',diff:5.0,min:70,pop:9200,tag:'中2・難関向け',desc:'中2難関志望者向けのハイレベル模試。'},
+    {grade:1,name:'中2 SAPIX中学部 公開模試',diff:2.2,min:64,pop:6800,tag:'中2・やや難',desc:'中2難関校志望者中心の公開模試。'},
+    {grade:1,name:'中2 Vもぎ・全県公開模試',diff:-2.0,min:0,pop:52000,tag:'中2・広域標準',desc:'中2の公立・私立志望者向け広域模試。'},
+    {grade:2,name:'中3 駿台高校受験公開テスト',diff:5.5,min:72,pop:11500,isKanmuri:true,tag:'中3・最難関冠',desc:'開成・筑駒・慶應女子など最難関志望層中心。'},
+    {grade:2,name:'中3 SAPIX中学部 公開模試',diff:2.5,min:68,pop:7400,tag:'中3・やや難',desc:'首都圏難関校志望層向けの記述・応用模試。'},
+    {grade:2,name:'中3 Vもぎ・Wもぎ（そっくり）',diff:0.0,min:60,pop:38000,tag:'中3・標準',desc:'都県立・私立対策の標準そっくり模試。'},
+    {grade:2,name:'中3 北辰・全県模試・五ツ木',diff:-3.5,min:0,pop:65000,tag:'中3・広域出やすい',desc:'地域の幅広い受験生が参加し偏差値が出やすい。'}
+  ],
+  [
+    {grade:0,name:'駿台・Z会 高1アドバンスト模試',diff:3.5,min:64,pop:32000,tag:'高1・難関記述',desc:'中高一貫・進学校の高1上位層向けハイレベル記述模試。'},
+    {grade:0,name:'河合塾 全統高1模試',diff:0.0,min:55,pop:145000,tag:'高1・標準',desc:'高1の全国標準レベル模試。'},
+    {grade:0,name:'東進 高1全国統一高校生テスト',diff:-1.5,min:50,pop:95000,tag:'高1・マーク型',desc:'高1向けの共通テスト型マーク模試。'},
+    {grade:0,name:'ベネッセ 進研模試（高1総合）',diff:-4.5,min:0,pop:410000,tag:'高1・広域基礎',desc:'高校単位で幅広い層が受験するため偏差値が出やすい。'},
+    {grade:1,name:'駿台・Z会 高2アドバンスト模試',diff:4.0,min:64,pop:36000,tag:'高2・難関記述',desc:'難関大志望の高2生が集まるハイレベル記述模試。'},
+    {grade:1,name:'河合塾 全統高2模試',diff:0.0,min:55,pop:165000,tag:'高2・標準',desc:'高2の全国標準模試。志望校判定の基準になる。'},
+    {grade:1,name:'東進 共通テスト同日・高2模試',diff:-1.5,min:50,pop:110000,tag:'高2・共テ型',desc:'共通テスト形式に早くから挑む高2マーク模試。'},
+    {grade:1,name:'ベネッセ 進研模試（高2総合）',diff:-4.5,min:0,pop:420000,tag:'高2・広域基礎',desc:'全国の高校生が幅広く受験し偏差値が出やすい。'},
+    {grade:2,name:'大学別冠模試（オープン/実戦/プレ）',diff:6.0,min:65,pop:14800,isKanmuri:true,tag:'高3・超難関冠',desc:'東大・京大・一橋・科学大・早慶などの志望者限定。飛び級受験は偏差値-25〜-30の超激戦！'},
+    {grade:2,name:'駿台全国模試（ハイレベル記述）',diff:4.0,min:59,pop:48000,tag:'高3・難関記述',desc:'難関国公立・医学部・早慶志望者中心の難問記述模試。'},
+    {grade:2,name:'河合塾 全統模試（共通・記述）',diff:0.0,min:53,pop:215000,tag:'高3・標準',desc:'全国最大の母集団を誇る標準的な大学受験模試。'},
+    {grade:2,name:'東進 共通テスト本番レベル模試',diff:-2.0,min:49,pop:125000,tag:'高3・共テ本番型',desc:'共通テスト本番形式のマーク模試。基礎の仕上がりが数値に出る。'},
+    {grade:2,name:'ベネッセ 進研模試（高3総合）',diff:-4.5,min:0,pop:430000,tag:'高3・広域基礎',desc:'幅広い受験層が参加するため偏差値が最も高く出やすい。'}
+  ]
+];
+
+
+/* =================================================================
+   模試別の目安偏差値（合格可能性80%ライン）と判定
+   中学：四谷大塚合不合・SAPIX・日能研R4・ONETES の2027年入試向け公表値（上位校は実測、他は各模試の換算曲線で補間）
+   高校：駿台高校受験公開テスト2026/27 確実ライン（実測）／SAPIX中学部・Vもぎ/Wもぎ・北辰/全県/五ツ木は換算曲線
+   ================================================================= */
+const FD={SX:5,YT:2,NN:0,ON:-4,SU:5.5,SXH:2.5,VM:0,HK:-3.5};
+const CV={
+ YT:[[40,36],[46,42],[52,48],[56,52],[60,57],[64,62],[66,65],[69,66],[71,70],[72,72],[78,78]],
+ SX:[[40,30],[46,38],[52,44],[56,50],[60,54],[64,58],[66,59],[69,62],[71,66],[72,69],[78,74]],
+ NN:[[40,38],[46,43],[52,49],[56,54],[60,59],[64,63],[66,66],[69,67],[71,69],[72,71],[78,76]],
+ ON:[[40,46],[46,52],[52,58],[56,63],[60,67],[64,72],[66,74],[69,76],[71,77.5],[72,78],[78,80]],
+ SU:[[40,29],[50,38],[57.75,45],[60,48],[66,56],[72,64],[78,72],[90,81]],
+ SXH:[[40,34],[50,43],[58,52],[66,60],[72,67],[78,74],[90,85]],
+ VM:[[40,40],[45,47],[50,53],[54,58],[58,62],[62,65],[65,67],[68,69],[70,70],[72,71],[76,75],[78,77],[90,88]],
+ HK:[[40,44],[50,54],[56,60],[62,66],[66,70],[70,73],[72,75],[76,77],[78,78],[90,89]]};
+const EXPS={
+ YT:'筑波大附属駒場中:74,開成中:72,聖光学院中:71,桜蔭中:70,渋谷教育学園渋谷中:67,女子学院中:67,駒場東邦中:66,武蔵中:66,早稲田中:66,栄光学園中:66,洗足学園中:66,雙葉中:66,麻布中:65,海城中:65,慶應義塾普通部:65,広尾学園中:65,早稲田実業中等部:65,早稲田大学高等学院中学部:65,慶應義塾中等部:65,慶應湘南藤沢中等部:65,豊島岡女子学園中:68,筑波大附属中:66,都立小石川中等教育学校:66',
+ SX:'筑波大附属駒場中:70,開成中:68,聖光学院中:66,渋谷教育学園幕張中:65,渋谷教育学園渋谷中:64,海城中:60,早稲田中:60,麻布中:59,駒場東邦中:59,栄光学園中:59,筑波大附属中:59,広尾学園中:58,慶應義塾普通部:58,早稲田実業中等部:58,慶應湘南藤沢中等部:58,慶應義塾中等部:58,市川中:58,武蔵中:57,本郷中:57,浅野中:57,早稲田大学高等学院中学部:56,芝中:56,県立千葉中:56,昭和学院秀英中:56,攻玉社中:55,明大明治中:55,高輪中:55,東京都市大付属中:55,東京農大第一中:55,三田国際科学学園中:55,栄東中:55,巣鴨中:54,東邦大東邦中:54,鎌倉学園中:54,桐朋中:53,暁星中:53,ラ・サール中:52,世田谷学園中:52,都立桜修館中等教育学校:52,都立両国高附属中:52,県立東葛飾中:52,愛光中:52,サレジオ学院中:52,青山学院中等部:51,神奈川大附属中:51,逗子開成中:50,明大中野中:50,中大横浜中:50,都立小石川中等教育学校:60,西大和学園中:60',
+ NN:'開成中:72,筑波大附属駒場中:71,灘中:71,聖光学院中:69,桜蔭中:69,渋谷教育学園渋谷中:69,豊島岡女子学園中:68,筑波大附属中:68,都立小石川中等教育学校:68,女子学院中:67,早稲田実業中等部:67,海城中:67,麻布中:66,駒場東邦中:66,武蔵中:66,早稲田中:66,広尾学園中:66,慶應義塾中等部:65,洗足学園中:65,雙葉中:65,市川中:65',
+ ON:'開成中:78,聖光学院中:78,筑波大附属駒場中:78,桜蔭中:78,麻布中:76,渋谷教育学園渋谷中:76,雙葉中:75,洗足学園中:75,筑波大附属中:75,海城中:74,駒場東邦中:74,武蔵中:74,早稲田中:74,早稲田実業中等部:74,慶應義塾普通部:74,浅野中:74,慶應義塾中等部:74,都立小石川中等教育学校:74,フェリス女学院中:74,東邦大東邦中:73,吉祥女子中:73,早稲田大学高等学院中学部:71,芝中:70,東京農大第一中:70,本郷中:70,サレジオ学院中:70,逗子開成中:70,神奈川大附属中:70,広尾学園小石川中:70,三田国際科学学園中:70'};
+const EXP={};Object.keys(EXPS).forEach(k=>{EXP[k]={};EXPS[k].split(',').forEach(x=>{const p=x.split(':');EXP[k][p[0]]=+p[1]})});
+const ip=(P,x)=>{const n=P.length;if(x<=P[0][0])return P[0][1]+(x-P[0][0]);if(x>=P[n-1][0])return P[n-1][1]+(x-P[n-1][0]);for(let i=1;i<n;i++)if(x<=P[i][0]){const a=P[i-1],b=P[i];return a[1]+(b[1]-a[1])*(x-a[0])/(b[0]-a[0])}};
+const ipI=(P,y)=>{const n=P.length;if(y<=P[0][1])return P[0][0]+(y-P[0][1]);if(y>=P[n-1][1])return P[n-1][0]+(y-P[n-1][1]);for(let i=1;i<n;i++)if(y<=P[i][1]){const a=P[i-1],b=P[i];return b[1]===a[1]?b[0]:a[0]+(b[0]-a[0])*(y-a[1])/(b[1]-a[1])}};
+function mFam(spec,si){const n=spec.name||'';if(si===0)return/サピックス|SAPIX/.test(n)?'SX':/四谷/.test(n)?'YT':/日能研/.test(n)?'NN':/ONETES/.test(n)?'ON':null;if(si===1)return/駿台/.test(n)?'SU':/SAPIX/.test(n)?'SXH':/Vもぎ|Wもぎ/.test(n)?'VM':/北辰|全県|五ツ木/.test(n)?'HK':null;return null}
+const mSi=spec=>MOCK_LIST[0].includes(spec)?0:MOCK_LIST[1].includes(spec)?1:2;
+const mOff=(spec,f)=>spec.diff-FD[f];
+function exScale(spec,a){const f=mFam(spec,mSi(spec));return f?ip(CV[f],a)-mOff(spec,f):a-spec.diff}
+function exInv(spec,v){const f=mFam(spec,mSi(spec));return f?ipI(CV[f],v+mOff(spec,f)):v+spec.diff}
+/* その模試での学校の目安偏差値（合格可能性80%） */
+function examT(spec,s){const f=mFam(spec,mSi(spec));if(!f)return Math.round((s[1]-spec.diff)*10)/10;let v;if(f==='SU'&&s[2]&&s[2].sun!=null)v=s[2].sun;else if(EXP[f]&&EXP[f][s[0]]!=null)v=EXP[f][s[0]];else v=ip(CV[f],s[1]);return Math.round((v-mOff(spec,f))*10)/10}
+const judgeDf=df=>df>=0?'A':df>=-2.5?'B':df>=-5?'C':df>=-8?'D':'E';
+
+const curGrade=S=>Math.min(2,Math.floor((S.t||0)/12));
+
+function autoMockIdx(si,fi,g=2){
+  const target=(SCH[si][fi]||SCH[si][0])[1];
+  const list=MOCK_LIST[si];
+  const candidates=list.map((m,i)=>({m,i})).filter(x=>x.m.grade===g);
+  const found=candidates.find(x=>target>=x.m.min);
+  return found?found.i:candidates[candidates.length-1].i;
+}
+
+function getMockSpec(S){
+  const g=curGrade(S);
+  const list=MOCK_LIST[S.si];
+  if(S.mockMode==='manual'&&S.mockIdx!=null&&list[S.mockIdx]&&list[S.mockIdx].grade>=g){
+    return list[S.mockIdx];
+  }
+  return list[autoMockIdx(S.si,S.fi||0,g)];
+}
+
+function calcJumpPenalty(S,spec){
+  const gap=spec.grade-curGrade(S);
+  if(gap<=0)return 0;
+  if(spec.isKanmuri)return gap===1?25:30;
+  return gap===1?13:20;
+}
+
+const isMockMonth=S=>MOCK_MONTH_INDICES.includes(S.t%12);
+
+function nextMockLabel(S){
+  for(let dt=0;dt<12;dt++){
+    const nt=S.t+dt;
+    if(nt>=S.len)return'今期の模試は終了';
+    if(MOCK_MONTH_INDICES.includes(nt%12)){
+      const m=((nt+3)%12)+1;
+      return dt===0?`今月(${m}月)実施！`:`次回 ${m}月`;
+    }
+  }
+  return'―';
+}
+
+/* =================================================================
+   5. 正規分布上位％算出（全国順位・志望校内順位用）
+   ================================================================= */
+function normTopPct(z){
+  // Abramowitz & Stegun 近似で上側確率 P(Z > z) を算出
+  const t=1/(1+0.2316419*Math.abs(z));
+  const d=0.39894228*Math.exp(-z*z/2);
+  const p=d*t*(0.31938153+t*(-0.356563782+t*(1.781477937+t*(-1.821255978+t*1.330274429))));
+  const upper=z>=0?p:1-p;
+  return Math.max(0.0001,Math.min(99.9,upper*100));
+}
+
+const ST=['中学受験編','高校受験編','大学受験編'],LB='小4 小5 小6 中1 中2 中3 高1 高2 高3'.split(' ');
+
+/* =================================================================
+   6. 38種類のライフ＆受験イベント
+   ================================================================= */
+const EV=[
+['友達が遊びに誘ってくれた',['行く',[0,3,0,8,-.3]],['断って勉強',[-1,0,1,-4,.6]]],
+['体調を崩しかけている',['ちゃんと休む',[10,0,0,0,-.2]],['無理して続ける',[-8,0,2,0,.5]]],
+['模試の結果がふるわなかった',['原因を見直す',[0,-2,-3,0,.8]],['気にしない',[0,3,3,0,0]]],
+['新しい教材をすすめられた',['買ってやってみる',[0,3,0,0,.8]],['今の教材をくり返す',[0,0,3,0,.3]]],
+['先生が声をかけてくれた',['相談してみる',[0,8,5,0,.3]],['一人でがんばる',[0,0,0,0,.2]]],
+['夜ふかしの誘惑（ゲーム・動画）',['がまんして寝る',[4,2,0,0,0]],['少しだけ…',[-3,-3,0,6,-.4]]],
+['家族が勉強のことで心配している',['話し合う',[0,5,4,2,0]],['反発する',[0,-5,0,3,-.2]]],
+['仲のいい友達がライバルになった',['負けじと競う',[-3,8,0,0,.4]],['気にしない',[0,0,2,2,0]]],
+['習いごと・部活をどうする？',['続ける',[0,0,0,6,-.3]],['やめて勉強に集中',[0,0,0,-6,.6]]],
+['夏期・冬期の特別講習の案内が届いた',['特訓コースを受講する',[-5,4,4,-3,1.0]],['自宅学習で復習する',[2,0,2,1,.4]]],
+['苦手単元の壁にぶつかった',['基礎からやり直す',[-1,2,4,0,.7]],['得意科目を伸ばす',[0,4,3,0,.5]]],
+['志望校の文化祭・説明会がある',['現地へ行って刺激を受ける',[0,10,5,3,.2]],['時間節約で机に向かう',[-1,-2,1,-2,.6]]],
+['ケアレスミスがなかなか減らない',['ミス専用ノートを作る',[-1,1,5,0,.6]],['演習量で押し切る',[-3,0,2,0,.5]]],
+['スマホの通知が集中をさまたげる',['電源を切って別室へ置く',[1,2,3,-2,.7]],['息抜きに少しだけ見る',[-1,1,0,3,-.3]]],
+['塾・学校のクラス替えテストが近い',['徹底対策して上を目指す',[-4,5,5,0,.8]],['普段通りのペースで受ける',[1,1,1,1,.2]]],
+['朝の15分を使った暗記習慣',['早起きして取り組む',[-2,3,4,0,.6]],['睡眠時間を優先する',[5,2,0,0,.1]]],
+['過去問（赤本）を初めて解いてみた',['解説を熟読して傾向分析',[-2,2,4,0,.9]],['点数の低さに落ち込む',[-2,-6,-5,0,.2]]],
+['学校行事でリーダー役を頼まれた',['引き受けて青春を満喫',[-3,6,3,9,-.2]],['受験を理由に辞退する',[1,-2,0,-3,.5]]],
+['スランプで問題が頭に入らない',['散歩と運動でリフレッシュ',[6,7,2,3,0]],['机にしがみついて粘る',[-6,-4,-2,0,.4]]],
+['友達から「一緒に自習室行こう」と誘われた',['閉館まで並んで勉強する',[-3,6,3,2,.7]],['自分の部屋で静かにやる',[1,0,2,-1,.4]]],
+['記述・論述問題の添削チャンス',['先生に赤ペン添削を頼む',[-1,4,5,0,.8]],['模範解答を見て自己採点',[0,0,2,0,.4]]],
+['SNSで同級生の好成績を見て焦る',['アプリを閉じて自分の課題へ',[0,3,3,0,.5]],['つい見続けて落ち込む',[-2,-7,-5,0,-.2]]],
+['家族が夜食を作って応援してくれた',['感謝してもうひと踏ん張り',[-1,8,4,2,.4]],['早く食べてすぐ寝る',[5,4,1,1,0]]],
+['参考書を何冊も買い込みたくなった',['今ある1冊を完璧にする',[0,2,5,0,.7]],['新しい参考書に手を出す',[-2,3,-2,0,.2]]],
+['図書館の静かな学習スペースを発見',['休日ごとに通い詰める',[-2,4,4,0,.7]],['いつもの勉強場所で続ける',[1,1,1,0,.3]]],
+['季節の変わり目で眠気が強い',['15分の仮眠をとって再開',[4,3,2,0,.4]],['カフェインで無理やり起きる',[-5,-2,1,0,.4]]],
+['先輩の合格体験記を読んだ',['勉強法をすぐ真似してみる',[0,7,4,0,.6]],['読み物として楽しむ',[0,3,1,2,.1]]],
+['グループ学習で友達に勉強を教えた',['教えることで理解が深まる',[-1,4,5,3,.6]],['自分の演習時間を優先する',[0,0,2,-2,.5]]],
+['休日まる一日フリーの日ができた',['10時間総復習チャレンジ',[-6,4,6,-3,1.1]],['趣味と休息で完全リフレッシュ',[8,8,2,6,0]]],
+['計算スピード・処理速度を上げたい',['毎日タイムアタック演習',[-2,2,4,0,.6]],['正確さ重視でじっくり解く',[0,1,3,0,.4]]],
+['進路希望調査の提出期限が来た',['強気の第一志望を書く',[0,6,4,0,.4]],['現実的な安全校も併記する',[0,2,5,0,.2]]],
+['雨の日で通学・通塾がおっくうだ',['気持ちを切り替えて集中',[-1,3,3,0,.5]],['家でゆっくり動画を観る',[3,2,0,4,-.3]]],
+['英語長文・読解の壁を感じる',['毎日1題の精読・音読を継続',[-2,2,4,0,.7]],['単語帳の暗記に逃げる',[0,1,2,0,.3]]],
+['同級生と志望校の話で盛り上がった',['お互いに合格を誓い合う',[0,8,4,4,.3]],['気後れして話題を変える',[0,-4,-3,1,0]]],
+['体調管理のために運動習慣を取り入れる',['週2回のランニングを始める',[7,4,2,2,.2]],['勉強時間を1分も削らない',[-3,0,1,-1,.4]]],
+['直前期の総まとめノート作り',['要点だけを凝縮して整理',[-1,3,6,0,.7]],['問題演習を最後まで続ける',[-3,1,3,0,.6]]],
+['思いがけず得意分野の難問が解けた',['自信をつけてさらに難問へ',[-1,7,7,0,.7]],['調子に乗らず基本を確認',[1,3,4,0,.5]]],
+['試験本番の時間配分シミュレーション',['ストップウォッチで実戦練習',[-2,2,6,0,.7]],['まずは解ける問題を増やす',[0,1,2,0,.4]]],
+['夜ふかしが続いて朝がつらい',['今夜は早く寝て睡眠をとる',[8,4,0,0,0]],['気合いで夜も勉強する',[-8,-3,1,0,.3]]],
+['風邪のひき始め。のどが痛い',['すぐ休んで病院へ行く',[5,2,0,-1,-.2]],['薬を飲んで根性で勉強する',[-12,-6,1,0,.2]]],
+['朝ごはんを抜く日が続いている',['しっかり朝食をとる習慣にする',[6,4,1,0,.1]],['時間がないので抜く',[-6,-2,1,0,.2]]],
+['急に勉強のやる気がゼロになった',['好きな音楽を聴いて気分転換',[2,8,0,2,0]],['無理やり机に向かう',[-4,-6,0,0,.2]]],
+['まわりが遊んでいて取り残された気分',['自分のペースだと割り切る',[0,6,1,-2,.1]],['つられて一緒に遊ぶ',[3,4,-3,7,-.4]]],
+['部活・習い事の友達との別れの季節',['ゆっくり思い出を語り合う',[1,6,-1,6,0]],['さみしさを勉強で紛らわす',[-3,-4,2,-3,.3]]],
+['肩こり・頭痛がひどい',['ストレッチと入浴で整える',[7,4,0,0,0]],['痛み止めでごまかす',[-6,-2,1,0,.2]]],
+['親とささいなことでケンカした',['落ち着いてから謝って話す',[0,5,0,1,0]],['口をきかず部屋にこもる',[-1,-8,-1,-2,0]]],
+['好きな人ができて気が散る',['気持ちを力に変えて頑張る',[0,6,1,6,.1]],['妄想で勉強が手につかない',[-2,-2,-2,5,-.4]]],
+['ゲームの新作が発売された',['合格まで封印すると決める',[0,-3,1,-3,.5]],['1時間だけ息抜きで遊ぶ',[1,6,0,5,-.1]]],
+['インフルエンザが学校で大流行',['マスク・手洗い・早寝を徹底',[4,2,0,0,0]],['気にせず無理な生活を続ける',[-10,-4,0,0,0]]],
+['試験の失敗で自信をなくした',['原因を分析して解き直す',[-2,3,5,0,.5]],['引きずって何も手につかない',[-3,-9,-5,0,-.3]]],
+['友達から旅行・遊びに誘われた',['断って勉強に集中する',[-1,-2,2,-5,.4]],['一日だけ思いきり遊ぶ',[5,8,-2,8,-.2]]],
+['急に暑さ・寒さが厳しくなった',['エアコンと服装で環境を整える',[4,2,1,0,.1]],['我慢して勉強を続ける',[-6,-3,0,0,0]]],
+['集中力が1時間もたない',['25分勉強＋5分休憩にする',[2,3,3,0,.4]],['長時間座り続ける',[-5,-3,0,0,.1]]],
+['好きなことで先生にほめられた',['素直に喜んで次につなげる',[0,9,3,3,.2]],['たまたまだと流す',[0,1,1,0,0]]],
+['試験前に緊張で眠れない',['深呼吸と軽い散歩で落ち着く',[4,5,1,0,0]],['朝まで復習を続ける',[-9,-5,1,0,.1]]],
+['お小遣い・おやつでほっこり',['家族と団らんの時間をとる',[3,7,0,5,0]],['部屋で一人勉強を続ける',[-1,-1,2,-2,.2]]],
+['目の疲れ・視力低下が気になる',['休憩と眼科受診で目を守る',[5,2,0,0,0]],['暗い部屋でも勉強し続ける',[-7,-3,1,0,.1]]],
+['ライバルが急成長して焦る',['自分の弱点に集中する',[-1,4,4,0,.5]],['比べて落ち込み夜ふかしする',[-6,-7,-2,0,0]]],
+['塾・学校の先生に相談した',['勉強計画を一緒に見直す',[2,8,5,0,.4]],['一人で抱え込む',[-2,-5,-1,-1,0]]],
+['ペットや家族の存在に癒やされた',['のんびり散歩に出かける',[6,7,0,5,0]],['勉強を優先して素通りする',[-1,-1,1,-2,.2]]],
+['期待のプレッシャーで胃が痛い',['気持ちを打ち明けて少し休む',[3,7,0,1,0]],['平気なふりを続ける',[-8,-6,0,-2,.2]]],
+['新しい文房具・勉強部屋で気分一新',['模様替えで気持ちを切り替える',[1,8,2,2,.2]],['今のままで続ける',[0,0,1,0,.1]]],
+['体育祭・文化祭など学校行事が近づく',['実行委員を引き受ける',[-4,5,-2,10,-.3]],['最低限の参加にして勉強を優先',[0,-2,2,-4,.4]]],
+['運動不足で体が重い',['毎朝10分の軽い運動を始める',[7,4,1,1,.1]],['座りっぱなしで続ける',[-5,-2,1,0,.1]]],
+['謎の腹痛・不調が続く',['早めに休んで病院で診てもらう',[5,3,0,0,-.1]],['我慢して勉強を続ける',[-11,-5,0,0,.1]]],
+['勉強が楽しいと感じられた日',['その感覚を大切に習慣にする',[1,9,4,2,.4]],['特に意識せず過ごす',[0,2,1,0,.1]]]
+];
+
+const TT=[['はじめの一歩','N',()=>true],['青春を謳歌','N',(p,S)=>S.y>=80],['健康第一','N',(p,S)=>S.h>=80],['全入の洗礼','N',(p,S)=>S.bn===SCH[S.si].length-1],['悪運の持ち主','N',p=>p[1]>=97],['勉強の虫','R',(p,S)=>S.hrs>=6000],['鉄のメンタル','R',(p,S)=>S.m>=85],['自信満々','R',(p,S)=>S.c>=90],['模試マニア','R',(p,S)=>(S.mocks||[]).length>=10],['塾選びの達人','R',(p,S)=>(S.jb||0)>=.06&&S.bn!==SCH[S.si].length-1],['努力の鬼','R',p=>p[3]<=5],['判断の天才','R',p=>p[2]<=5],['全教科バランス','SR',(p,S)=>!!S.subA&&Math.max(...S.subA)-Math.min(...S.subA)<=6],['一点突破','SR',(p,S)=>!!S.subA&&Math.max(...S.subA)-Math.min(...S.subA)>=22],['苦手を克服','SR',(p,S)=>{if(!S.sk)return false;const c=getCurriculum(S).findIndex(x=>x.key===S.sk.w);return c>=0&&S.subA[c]>=S.a}],['才能を努力で超えた','SR',(p,S)=>S.b.k===3&&S.rv>=62],['最貧からの勝利','SR',(p,S)=>S.b.f===3&&S.b.t===3&&p[4]<=15],['生まれながらの勝者','SR',p=>p[0]<=5&&p[4]<=10],['強運の持ち主','SR',p=>p[1]<=3],['難関突破','SR',(p,S)=>S.rv>=66],['奇跡の下剋上','SSR',p=>p[0]>=60&&p[4]<=5],['全SSRの生まれ','SSR',(p,S)=>!S.b.f&&!S.b.t&&!S.b.k],['頂点に立つ者','SSR',(p,S)=>S.rv>=70],['通し人生・全勝','SSR',(p,S)=>S.stages.length===2&&(S.rvh||[]).length>=2&&S.rvh.slice(-2).every(v=>v>=62)],['自己分析の達人','R',(p,S)=>!!S.isDiag],['リアル下剋上','SSR',(p,S)=>!!S.isDiag&&p[0]>=45&&p[4]<=10]];
+const ld=k=>{try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},sv=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+let S=null;
+const save=()=>S&&sv('jg_s',S);
+const lab=s=>{const y=Math.floor(s.t/12);return(y>2?'浪人':LB[s.si*3+y])+' '+((s.t+3)%12+1)+'月'};
+const mock=S=>Math.round((S.a+G(S.seed,S.t+1000*S.si,5)*1.6)*10)/10;
+
+function rollEv(S){
+  S.ev=null;
+  // ★ 高1の11月（si===2 && t===7）は必ず「文理選択イベント」を発生させる！
+  if(S.si===2&&S.t===7&&!S.bunri){
+    S.ev='bunri';
+    return;
+  }
+  if(S.si===2&&S.bunri&&S.t>=8&&S.t<=11&&elecNext(S)){S.ev='elec';return;}
+  if(S.t<S.len){const rs=RR(S.seed,S.t+1000*S.si,2),sd=S.m<30&&rs<.55?'やる気が出ない':S.h<35&&rs<.55?'体調がかなり悪い':S.c>85&&rs<.3?'最近すごく調子':null;if(sd){S.ev=EV.findIndex(e=>e[0].startsWith(sd));S.lastEv=S.ev;return}}
+  if(S.t<S.len&&RR(S.seed,S.t+1000*S.si,0)<.72){
+    const C=EVC(S);let idx=C[Math.floor(RR(S.seed,S.t+1000*S.si,1)*C.length)];if(idx===S.lastEv||(idx===2&&(!S.mocks||S.mocks.length===0)))idx=C[(C.indexOf(idx)+3)%C.length];
+    S.ev=idx;
+    S.lastEv=idx;
+  }
+}
+
+function ns(b,si,seed,a,p){
+  const S={
+    b,si,seed,a,p,sx:PSX,t:0,len:34,pace:1,paces:[],ch:[],hrs:0,h:70,m:65,c:50,y:50,
+    ev:null,lastEv:-1,msg:'',mocks:[],avgMock:null,lastMock:null,mockMode:'auto',mockIdx:null,
+    ui:{hideStat:false,hideLog:false},kt:null,nijiStrat:1,bunri:null
+  };
+  const cur=getCurriculum(S);
+  S.subA=cur.map((c,i)=>Math.round((a+(RR(seed,i,77)-0.5)*1.2+(TAL[b.k][3]?(AFF[TAL[b.k][3]].includes(c.key)?3:-1.5):0))*10)/10);
+  S.subHrs=distributeIntHours(BASE_WEEK_HRS[si],cur.map(c=>c.w));
+  syncOverallFromSubs(S);
+  S.lm=mock(S);
+  rollEv(S);
+  return S;
+}
+
+function pk(S,i){
+  if(S.ev==='elec'){const k=elecNext(S);S.elec=S.elec||{};if(k)S.elec[k]=Math.min(i,2);S.ev=null;return;}
+  // 高1 11月 文理選択イベントの処理
+  if(S.ev==='bunri'){
+    const oldCur=getCurriculum(S);
+    const oldMap={};
+    oldCur.forEach((c,k)=>{oldMap[c.key]=S.subA[k];});
+    const oldTotal=getTotalWeekHrs(S)||BASE_WEEK_HRS[2];
+
+    S.bunri=i===0?'bun':'ri';
+    const newCur=getCurriculum(S);
+    S.subA=newCur.map(c=>{
+      const base=oldMap[c.key]??S.a;
+      const bonus=S.bunri==='bun'
+        ?((c.key==='jpn'||c.key==='soc')?1.4:(c.key==='sci'?-1.0:0))
+        :((c.key==='math'||c.key==='sci')?1.4:(c.key==='soc'?-1.0:0));
+      return Math.max(25,Math.min(AMAX(S),Math.round((base+bonus)*10)/10));
+    });
+    S.subHrs=distributeIntHours(oldTotal,newCur.map(c=>c.w));
+    syncOverallFromSubs(S);
+    S.m=cl(S.m+5);
+    S.c=cl(S.c+5);
+    S.ch.push(i);
+    S.ev=null;
+    return;
+  }
+
+  const ch=EV[S.ev][i+1];let e=ch[1];S.evRes='';if(ch[2]){const win=RR(S.seed,S.t+1000*S.si,70+i)<ch[2][0];if(!win)e=ch[2][1];S.evRes=win?'【成功！】':'【失敗…】'}
+  S.h=cl(S.h+e[0]);
+  S.m=cl(S.m+e[1]);
+  S.c=cl(S.c+e[2]);
+  S.y=cl(S.y+e[3]);
+  S.subA=S.subA.map(v=>Math.max(25,Math.min(AMAX(S),v+e[4]*0.45)));
+  syncOverallFromSubs(S);
+  S.ch.push(i);
+  S.ev=null;
+}
+
+const capRatio=S=>0.7+(S.h+S.m)/200*1.5;
+function step(S){
+  applyAct(S);
+  const cur=getCurriculum(S);
+  const baseWeek=BASE_WEEK_HRS[S.si];
+  let weekTotal=getTotalWeekHrs(S);
+  const cap=capRatio(S)+(RR(S.seed,S.t+1000*S.si,60)-.5)*.2;
+  let failMsg='';
+  if(weekTotal/baseWeek>cap){
+    const nt=Math.max(Math.round(baseWeek*.6),Math.floor(baseWeek*cap));
+    S.subHrs=distributeIntHours(nt,S.subHrs.map(h=>h/weekTotal));
+    failMsg=`体力${Math.round(S.h)}・やる気${Math.round(S.m)}では「${PN[S.pace]}」は無理だった…実際にこなせたのは週${nt}h`;
+    weekTotal=getTotalWeekHrs(S);
+    S.h=cl(S.h-4);S.m=cl(S.m-4);
+  }
+  const effortRatio=weekTotal/baseWeek;
+
+  // 週間合計勉強時間から実効ペース値を算出
+  S.paces.push(weekTotal);
+  S.hrs+=weekTotal*4.3;
+
+  // 週間勉強時間に応じた体力・やる気・青春の増減
+  let dh,dm,dy;
+  if(effortRatio<=0.6){dh=3;dm=2;dy=4;}
+  else if(effortRatio<=1.05){
+    const r=(effortRatio-0.6)/0.45;
+    dh=3*(1-r);dm=2*(1-r);dy=4-3*r;
+  }else if(effortRatio<=1.55){
+    const r=(effortRatio-1.05)/0.5;
+    dh=-3*r;dm=-2*r;dy=1-3*r;
+  }else{
+    const r=Math.min(1.3,(effortRatio-1.55)/0.5);
+    dh=-3-4*r;dm=-2-3*r;dy=-2-3*r;
+  }
+  if(dh<0)dh*=1.4;
+  if(dm<0)dm*=1.4;
+  S.h=cl(S.h+dh+(60-S.h)*.1);
+  S.m=cl(S.m+dm+(60-S.m)*.1);
+  S.y=cl(S.y+dy+(50-S.y)*.05);
+
+  // 各科目ごとの割り当て時間に応じた伸びやすさ・下がりやすさ計算
+  const commonFactor=(.4+(S.h+S.m)/200)*TAL[S.b.k][1]*(.9+S.c/500)*(1+(S.jb||0))*(S.m<25?.6:S.m<40?.85:1)*(S.actMul||1);
+  cur.forEach((c,k)=>{
+    const req=baseWeek*c.w;
+    const alloc=S.subHrs[k]||0;
+    const curVal=S.subA[k];
+    let delta=0;
+    if(alloc<=0){
+      // 0時間割り当ての科目は演習不足で確実に下降
+      delta=-0.55;
+    }else if(alloc<req*0.5){
+      // 標準の半分未満だと微減〜停滞
+      delta=-0.22*(1-alloc/(req*0.5));
+    }else{
+      // 割り当て時間が多いほど伸びやすく、ポテンシャル天井で減衰
+      const ratio=Math.pow(alloc/req,0.88);
+      const potFactor=Math.max(0,(S.p+(S.b.k>=4?14:10)-curVal)/12);
+      delta=0.2*ratio*commonFactor*potFactor*affMul(S,c.key)*elecMul(S,c.key);
+    }
+    S.subA[k]=Math.max(25,Math.min(AMAX(S),curVal+delta));
+  });
+  syncOverallFromSubs(S);
+
+  const noise=G(S.seed,S.t+1000*S.si,5);
+  const mk=Math.round((S.a+noise*1.6)*10)/10;
+  S.lastMockRec=null;
+
+  if(S.ex!==false&&isMockMonth(S)){
+    const spec=getMockSpec(S);
+    const jumpPen=calcJumpPenalty(S,spec);
+    const prevRec=S.mocks&&S.mocks.length?S.mocks[S.mocks.length-1]:null;
+    const pop=spec.pop||50000;
+
+    // 各教科ごとの模試偏差値・得点・前回比・科目順位を算出
+    let wDevSum=0,wSum=0,totScore=0,totMax=0,wU=0;
+    const capDev=spec.isKanmuri?100:/駿台/.test(spec.name)?90:85;
+    const subResults=cur.map((c,k)=>{
+      if(S.si===2&&S.t<12&&!['eng','math','jpn'].includes(c.key))return null;
+      const sNoise=G(S.seed,S.t+1000*S.si,30+k*7);
+      const sU=Math.max(25.0,exScale(spec,S.subA[k])-jumpPen+sNoise*1.6);const sDev=Math.round(Math.min(capDev,sU)*10)/10;wU+=sU*c.w;
+      const pct=Math.max(0.14,Math.min(0.99,0.50+(sDev-50)*0.0155));
+      const score=Math.round(c.maxPts*pct);
+      const prevSub=prevRec&&prevRec.subs?prevRec.subs.find(x=>x.key===c.key):null;
+      const delta=prevSub?Math.round((sDev-prevSub.dev)*10)/10:null;
+      const sTopPct=normTopPct((sU-50)/10);
+      const sRank=Math.max(1,Math.round(pop*(sTopPct/100)));
+      wDevSum+=sDev*c.w;
+      wSum+=c.w;
+      totScore+=score;
+      totMax+=c.maxPts;
+      return{key:c.key,name:c.name,short:c.short,dev:sDev,score,maxPts:c.maxPts,delta,rank:sRank,topPct:sTopPct};
+    }).filter(Boolean);
+
+    const rawScore=Math.round(Math.max(25.0,Math.min(capDev,wDevSum/(wSum||1)))*10)/10;
+    const rawU=Math.max(25,wU/(wSum||1));
+    const natTopPct=normTopPct((rawU-50)/10);
+    const natRank=Math.max(1,Math.round(pop*(natTopPct/100)));
+
+    // 第一志望校内の順位・志望者数・判定
+    const f=SCH[S.si][S.fi||0];
+    const targetDev=examT(spec,f);
+    const targetPop=Math.max(120,Math.round(pop*(targetDev>=68?0.045:targetDev>=60?0.07:0.095)));
+    const targetTopPct=normTopPct((rawU-(targetDev-2.5))/7.5);
+    const targetRank=Math.max(1,Math.min(targetPop,natRank,Math.round(targetPop*(targetTopPct/100))));
+    const df=rawScore-targetDev;
+    const judgment=judgeDf(df);
+
+    S.mocks=S.mocks||[];
+    const prevAvg=S.avgMock!=null?S.avgMock:rawScore;
+    const prevSingle=S.lastMock!=null?S.lastMock:rawScore;
+    const recObj={
+      lab:lab(S),name:spec.name,diff:spec.diff,jumpPen,aEst:Math.round(exInv(spec,rawScore+jumpPen)*10)/10,tag:spec.tag,
+      score:rawScore,totScore,totMax,pop,natRank,natTopPct,
+      targetName:f[0],targetDev,targetPop,targetRank,judgment,
+      subs:subResults
+    };
+    S.mocks.push(recObj);
+    {const w=S.mocks.map((x,i)=>Math.pow(.62,S.mocks.length-1-i)),nm=S.mocks.map(x=>x.aEst!=null?x.aEst:x.score+(x.diff||0)+(x.jumpPen||0));S.avgMock=Math.round((exScale(spec,nm.reduce((a,v,i)=>a+v*w[i],0)/w.reduce((a,b)=>a+b,0))-jumpPen)*10)/10}
+    S.lastMock=rawScore;
+    S.lastMockRec={
+      ...recObj,
+      avg:S.avgMock,
+      deltaLast:Math.round((rawScore-prevSingle)*10)/10,
+      deltaAvg:Math.round((S.avgMock-prevAvg)*10)/10
+    };
+
+    if(jumpPen>0){
+      S.subA=S.subA.map(v=>Math.min(AMAX(S),v+0.15*(spec.grade-curGrade(S))));
+      syncOverallFromSubs(S);
+      S.c=cl(S.c+Math.max(-2,Math.min(5,(rawScore-prevAvg)*0.8)));
+    }else{
+      S.c=cl(S.c+Math.max(-6,Math.min(6,(rawScore-prevAvg)*2)));
+    }
+  }else{
+    S.c=cl(S.c+Math.max(-3,Math.min(3,(mk-S.lm))));
+  }
+  S.lm=mk;
+
+  S.msg=failMsg;
+  if(effortRatio>=1.38&&(S.m<25||S.c<25)){
+    S.pace=1;
+    const curTotal=getTotalWeekHrs(S)||baseWeek;
+    S.subHrs=distributeIntHours(baseWeek,S.subHrs.map(h=>h/curTotal));
+    S.msg='つかれて、週間勉強時間を標準ペースにもどしました';
+  }
+  S.t++;
+  rollEv(S);
+}
+
+/* =================================================================
+   7. 大学入学共通テスト（1000点満点）＆ 二次試験・共テ利用 判定エンジン
+   ================================================================= */
+function runKyotsu(S){
+  const T=S.t+1000*S.si;
+  const cur=getCurriculum(S);
+  const subDevMap={};
+  cur.forEach((c,i)=>{subDevMap[c.key]=S.subA[i]??S.a;});
+
+  const subDefs=[
+    {key:'eng',name:'英語（R+L）',max:200,w:1.02},
+    {key:'math',name:'数学（IA+IIBC）',max:200,w:0.99},
+    {key:'jpn',name:'国語（現古漢）',max:200,w:1.00},
+    {key:'sci',name:'理科（基礎/専門）',max:200,w:0.99},
+    {key:'soc',name:'地歴公民',max:100,w:1.01},
+    {key:'info',name:'情報I',max:100,w:1.02}
+  ];
+
+  const subs=subDefs.map((sub,i)=>{
+    const sDev=subDevMap[sub.key]??S.a;
+    const basePct=Math.max(28,Math.min(98,62+(sDev-50)*1.36+(S.h-60)/18+(S.c-50)/28));
+    const noise=G(S.seed,T,200+i*3)*4.8;
+    const pct=Math.max(25,Math.min(99,basePct*sub.w+noise));
+    const score=Math.min(sub.max,Math.max(Math.round(sub.max*0.25),Math.round(sub.max*(pct/100))));
+    return{name:sub.name,score,max:sub.max};
+  });
+
+  const total=subs.reduce((a,b)=>a+b.score,0);
+  const pct=Math.round(total)/10;
+  const ktDev=Math.round((50+(pct-62)/1.36)*10)/10;
+  S.kt={subs,total,pct,ktDev};
+}
+
+function autoUniApp(S){
+  const L=SCH[2].slice(0,-1);
+  const pct=S.kt?S.kt.pct:(62+(S.a-50)*1.36);
+  const apps=[];
+  const fi=S.fi||0;
+  const fMeta=getUniMeta(L[fi]);
+  apps.push({idx:fi,mode:fMeta.isNat?'nat_zenki':'priv_ippan'});
+
+  const privIndices=L.map((s,i)=>({s,i,m:getUniMeta(s)})).filter(x=>!x.m.isNat&&isBunriMatch(S.bunri,x.m.bunri));
+  const safeKyote=privIndices.find(x=>x.m.kyoteBorderPct<=pct-2);
+  if(safeKyote)apps.push({idx:safeKyote.i,mode:'priv_kyote'});
+  const challengeKyote=privIndices.find(x=>x.m.kyoteBorderPct<=pct+2&&x.i!==safeKyote?.i);
+  if(challengeKyote&&apps.length<5)apps.push({idx:challengeKyote.i,mode:'priv_kyote'});
+
+  const targetIppan=privIndices.find(x=>x.s[1]<=S.a-1&&!apps.some(a=>a.idx===x.i&&a.mode==='priv_ippan'));
+  if(targetIppan&&apps.length<5)apps.push({idx:targetIppan.i,mode:'priv_ippan'});
+  const safeIppan=privIndices.find(x=>x.s[1]<=S.a-6&&!apps.some(a=>a.idx===x.i&&a.mode==='priv_ippan'));
+  if(safeIppan&&apps.length<5)apps.push({idx:safeIppan.i,mode:'priv_ippan'});
+
+  return apps.slice(0,5);
+}
+
+function isBunriMatch(playerBunri, deptBunri){
+  if(!playerBunri||deptBunri==='共')return true;
+  if(playerBunri==='bun'&&(deptBunri==='理'||deptBunri==='医'))return false;
+  if(playerBunri==='ri'&&deptBunri==='文')return false;
+  return true;
+}
+
+function evalKyoteEarly(S){
+  const L=SCH[2];
+  const ktPct=S.kt.pct;
+  const T=S.t+1000*S.si;
+  S.kyoteResults=[];
+  (S.ap||[]).forEach((item,i)=>{
+    if(item.mode!=='priv_kyote')return;
+    const u=L[item.idx];
+    const meta=getUniMeta(u);
+    const borderScore=meta.kyoteBorderPct*10;
+    const diffPct=ktPct-meta.kyoteBorderPct;
+    const pz=1/(1+Math.exp(-diffPct/1.35));
+    const ok=RR(S.seed,T,400+i)<pz;
+    S.kyoteResults.push({idx:item.idx,name:u[0],dev:u[1],borderScore,myScore:S.kt.total,ok,pz});
+  });
+  S.kyoteChecked=true;
+  if(S.kyoteResults.some(x=>x.ok)){
+    S.m=cl(S.m+8);
+    S.c=cl(S.c+10);
+  }
+}
+
+function secDevOf(S,m){const cur=getCurriculum(S),W=m.bunri==='医'?{eng:.25,math:.3,sci:.35,jpn:.1}:m.bunri==='理'?{eng:.25,math:.4,sci:.35}:m.bunri==='文'?{eng:.35,jpn:.35,soc:.3}:{eng:.4,jpn:.2,math:.2,soc:.1,sci:.1};let s=0,w=0;cur.forEach((c,k)=>{const x=W[c.key];if(x){s+=S.subA[k]*x;w+=x}});return w?s/w:S.a}
+function examUniFull(S){
+  const L=SCH[2];
+  const T=S.t+1000*S.si;
+  const strat=S.nijiStrat??1;
+  const stratShift=strat===0?-0.6:strat===2?1.2:0;
+  const stratNoise=strat===0?1.1:strat===2?2.8:1.8;
+  S.xs=S.a+(S.h-60)/12+(S.c-50)/35+stratShift+G(S.seed,T,50)*stratNoise;
+
+  let best=L[L.length-1][1],bn=L.length-1;
+  const res=[];
+  (S.ap||[]).forEach((item,i)=>{
+    const u=L[item.idx];
+    const d=u[1];
+    const meta=getUniMeta(u);
+    const bunriPen=isBunriMatch(S.bunri,meta.bunri)?0:5.5;
+
+    if(item.mode==='priv_kyote'){
+      const kr=(S.kyoteResults||[]).find(x=>x.idx===item.idx);
+      const ok=kr?kr.ok:false;
+      const pz=kr?kr.pz:0;
+      res.push({idx:item.idx,mode:item.mode,pz,ok,detail:`共テ ${S.kt.total}点 / ボーダー ${meta.kyoteBorderPct*10}点`});
+      if(ok&&d>best){best=d;bn=item.idx;}
+    }else if(meta.isNat){
+      const ktPct=S.kt.pct;
+      const ashikiri=ktPct<meta.ashikiriPct;
+      const ktEquivDev=50+(ktPct-62)/1.36;
+      const wSec=meta.secRatio/100;
+      const effDev=ktEquivDev*(1-wSec)+(S.xs-bunriPen+(secDevOf(S,meta)-S.a))*wSec+(item.mode==='nat_koki'?-1.5:0);
+      const pz=ashikiri?0.01:1/(1+Math.exp(-(effDev-d)/2.3));
+      const ok=!ashikiri&&RR(S.seed,T,100+i)<pz;
+      const tag=item.mode==='nat_koki'?'後期':'前期';
+      const detail=ashikiri
+        ?`共テ ${ktPct.toFixed(1)}%（足切り ${meta.ashikiriPct}%未満）`
+        :`共テ${100-meta.secRatio}%＋二次${meta.secRatio}%${bunriPen>0?' [文理不一致減点]':''}`;
+      res.push({idx:item.idx,mode:item.mode,tag,pz,ok,detail});
+      if(ok&&d>best){best=d;bn=item.idx;}
+    }else{
+      const ktBonus=(S.kt.pct-meta.kyoteBorderPct)*0.08;
+      const eff=S.xs+ktBonus-bunriPen+(secDevOf(S,meta)-S.a);
+      const pz=1/(1+Math.exp(-(eff-d)/2.4));
+      const ok=RR(S.seed,T,100+i)<pz;
+      res.push({idx:item.idx,mode:item.mode,pz,ok,detail:`個別学力試験（指数 ${eff.toFixed(1)} / 目安 ${d}${bunriPen>0?' 文理不一致':''}）`});
+      if(ok&&d>best){best=d;bn=item.idx;}
+    }
+  });
+  return{rv:best,bn,res};
+}
+
+function exam(S,ap){const L=SCH[S.si],T=S.t+1000*S.si;S.xs=S.a+(S.h-60)/12+G(S.seed,T,50)*1.8;
+ let best=L[L.length-1][1],bn=L.length-1;const res=[];
+ ap.forEach((j,i)=>{const d=L[j][1],pz=1/(1+Math.exp(-(S.xs-d+PZ0)/2.5)),ok=RR(S.seed,T,100+i)<pz;res.push([j,pz,ok]);if(ok&&d>best){best=d;bn=j}});
+ return{rv:best,bn,res}}
+
+const auto=S=>{const L=SCH[S.si].slice(0,-1),f=x=>L.findIndex(s=>s[1]<=x&&okSx(S,s));return[...new Set([f(S.a+6),f(S.a-2),f(S.a-7)].filter(i=>i>=0))]};
+function sim(o){const S=ns(o.b,o.si,o.seed,o.a,o.p);S.len=o.len;rollEv(S);
+ while(S.t<S.len){
+   if(S.ev!=null)pk(S,o.cf(S.ch.length));
+   const pVal=o.pf(S.t);
+   const targetW=pVal>3?pVal:PACE_WEEK_PRESETS[S.si][pVal];
+   const cur=getCurriculum(S);
+   S.subHrs=distributeIntHours(targetW,cur.map(c=>c.w));
+   S.act=o.af?o.af(S.t):0;S.sk=o.sk;
+   step(S);
+ }
+ if(o.si===2){runKyotsu(S);S.fi=Math.max(0,SCH[2].slice(0,-1).findIndex(s=>s[1]<=S.a+6));S.nijiStrat=o.strat??1;S.ap=(o.ap&&o.ap[0]&&typeof o.ap[0]==='object')?o.ap:autoUniApp(S);evalKyoteEarly(S);const y=examUniFull(S);return{rv:y.rv,bn:y.bn,h:S.hrs}}
+ const x=exam(S,o.ap||auto(S));return{rv:x.rv,bn:x.bn,h:S.hrs}}
+
+function analyze(S){
+ const apIdx=S.si===2&&Array.isArray(S.ap)?[...new Set(S.ap.map(x=>typeof x==='object'?x.idx:x))]:S.ap;
+ const pf=t=>S.paces[t]??BASE_WEEK_HRS[S.si],cf=n=>S.ch[n]??0,bs={b:S.b,si:S.si,len:S.len,a:S.a0,p:S.p0,ap:S.si===2?S.ap:apIdx,strat:S.nijiStrat,af:t=>(S.acts&&S.acts[t])||0,sk:S.sk};
+ const rp=d=>t=>[0,1,1,2,2,3][RR(d,t,300)*6|0],rc=d=>n=>RR(d,n,301)<.5?0:1,ra=d=>t=>(RR(d,t,310)*ACT.length)|0;
+ const rk=(X,v)=>Math.max(1,Math.round(100*(X.filter(x=>x>v).length+X.filter(x=>x==v).length/2)/X.length));
+ const L=[],C=[],E=[],P=[],B=[];
+ for(let i=0;i<120;i++){const d=S.seed+7919*(i+1);
+  L.push(sim({...bs,seed:d,pf,cf}));
+  C.push(sim({...bs,seed:S.seed,pf:rp(d),cf:rc(d),af:ra(d)}).rv);
+  E.push(sim({...bs,seed:d,pf:rp(d),cf:rc(d),af:ra(d)}).h);
+  const rb={f:roll(RR(d,0,400),'f'),t:roll(RR(d,0,401),'t'),k:roll(RR(d,0,402),'k')},s0=st0(rb,S.si);B.push(s0.p);
+  P.push(sim({b:rb,si:S.si,len:34,a:s0.a,p:s0.p,seed:d,pf:rp(d),cf:rc(d),af:ra(d)}).rv)}
+ const Lr=L.map(x=>x.rv),med=[...Lr].sort((x,y)=>x-y)[60];
+ return{p:[rk(B,S.p0),rk(Lr,S.rv),rk(C,S.rv),rk(E,S.hrs),rk(P,S.rv)],sc:Math.round(10000*Math.exp((S.rv-med)/10)),sv:L.slice(0,4).map(x=>x.bn)}}
+
+function rec(){const r=ld('jg_r')||{pl:[],tt:{}},a=S.an;S.nt=[];(S.rvh=S.rvh||[]).push(S.rv);
+ TT.forEach(t=>{if(t[2](a.p,S)){if(!r.tt[t[0]])S.nt.push(t[0]);r.tt[t[0]]=(r.tt[t[0]]||0)+1}});
+ r.n=(r.n||0)+1;(r.sch=r.sch||{})[SCH[S.si][S.bn][0]]=1;r.pl.unshift([ST[S.si],SCH[S.si][S.bn][0],a.sc,new Date().toLocaleDateString('ja-JP')]);r.pl=r.pl.slice(0,30);sv('jg_r',r)}
+
+function init(){
+  const prevMode=S.mockMode||'auto',prevIdx=S.mockIdx!=null?S.mockIdx:null,prevUi=S.ui||{hideStat:false,hideLog:false},prevName=S.name||'ロト';
+  const n=ns(S.b,S.si,S.seed,S.a,S.p);
+  Object.assign(S,n,{sx:S.sx||n.sx,acts:[],act:0,a0:S.a,p0:S.p,fi:0,ap:null,mockMode:prevMode,mockIdx:prevIdx,ui:prevUi,name:prevName});
+}
+
+const SC=['top','diag','setup','game','exam','result'],H=i=>document.getElementById(i),CC=['#facc15','#c084fc','#38bdf8','#a3a3a3','#f43f5e','#f43f5e'];
+const PN=['ゆるめ','ふつう','しっかり','限界まで'];
+
+function setHeaderMode(inPlay){
+  H('header-subtitle').classList.toggle('hidden',inPlay);
+  H('header-nav-idle').classList.toggle('hidden',inPlay);
+  H('header-nav-play').classList.toggle('hidden',!inPlay);
+}
+
+const show=n=>{
+  SC.forEach(x=>H('screen-'+x).classList.toggle('hidden',x!=n));
+  setHeaderMode(n==='game'||n==='exam');
+  if(window._curScr!==n)scrollTo(0,0);
+  window._curScr=n;
+  if(typeof RetroAudio!=='undefined'){
+    if(n==='top'||n==='diag'||n==='setup')RetroAudio.setScene('title');
+    else if(n==='game')RetroAudio.setScene((typeof S!=='undefined'&&S&&S.ev!=null)?'event':'study');
+    else if(n==='exam')RetroAudio.setScene('exam');
+    else if(n==='result'){
+      const ok=(typeof S!=='undefined'&&S&&S.bn!=SCH[S.si].length-1);
+      RetroAudio.setScene(ok?'result_win':'result_lose');
+    }
+  }
+};
+const btn=(f,t,c)=>`<button onclick="${f}" class="rpg-cmd w-full py-3 px-3 min-h-[46px] text-sm font-bold ${c}"><span class="cursor-arrow">▶</span> ${t}</button>`;
+
+function openModal(i){
+  if(i=='modal-titles')renderTitles();
+  if(i=='modal-mocks')renderMocksModal();
+  if(i=='modal-target')renderTargetModal();
+  if(i=='modal-sound'&&typeof RetroAudio!=='undefined')RetroAudio.syncUI();
+  H(i).classList.remove('hidden');
+  if(typeof RetroAudio!=='undefined'){
+    if(i==='modal-mock-report'){
+      RetroAudio.setScene('event');
+    }else{
+      RetroAudio.playSE('decide');
+    }
+  }
+}
+function closeModal(i){
+  H(i).classList.add('hidden');
+  if(typeof RetroAudio!=='undefined'){
+    RetroAudio.playSE('cancel');
+    if(i==='modal-mock-report'&&window._curScr==='game'){
+      RetroAudio.setScene((typeof S!=='undefined'&&S&&S.ev!=null)?'event':'study');
+    }
+  }
+}
+function go(v){S.v=v;save();R()}
+function R(){if(S)applySex(S.sx||'m');({diag:Diag,setup:Setup,play:Play,kt:Kt,app:App,niji:Niji,ann:Ann,res:Res})[S.v]()}
+function goHome(){Home()}
+
+function showToast(msg){
+  const el=H('toast-notification');
+  el.textContent=msg;
+  el.classList.remove('hidden');
+  clearTimeout(window._toastTimer);
+  window._toastTimer=setTimeout(()=>el.classList.add('hidden'),2200);
+}
+
+function togglePanel(key){
+  if(!S)return;
+  S.ui=S.ui||{hideStat:false,hideLog:false};
+  S.ui[key]=!S.ui[key];
+  save();
+  Play();
+}
+
+
+/* =================================================================
+   あなたの診断モード（質問回答 → ガチャ性能・得意苦手・二つ名判定）
+   ================================================================= */
+function startDiag(){
+  S={
+    isDiag:true,diagStep:0,diagAns:{},ed:'full',stages:ED.full[2],k:0,si:0,t:0,
+    seed:Math.random()*1e9|0,b:{},ex:true,rr:0,name:'ロト',log:[],
+    mocks:[],avgMock:null,lastMock:null,mockMode:'auto',mockIdx:null,
+    ui:{hideStat:false,hideLog:false}
+  };
+  go('diag');
+}
+
+function diagPick(stepIdx,val){
+  S.diagAns[stepIdx]=val;
+  if(stepIdx===0){
+    S.ed=val;
+    S.stages=ED[val][2];
+    S.si=S.stages[0];
+  }
+  if(stepIdx===5&&S.diagAns[6]===val){
+    delete S.diagAns[6];
+  }
+  if(stepIdx>=6){
+    buildDiagResult();
+    S.diagStep=7;
+    if(typeof RetroAudio!=='undefined')RetroAudio.playSE('diag_done');
+  }else{
+    S.diagStep=stepIdx+1;
+    if(typeof RetroAudio!=='undefined')RetroAudio.playSE('decide');
+  }
+  save();
+  Diag();
+}
+
+function diagBack(){
+  if(!S)return;
+  if(S.diagStep<=0)return Home();
+  S.diagStep--;
+  save();
+  Diag();
+}
+
+function buildDiagResult(){
+  const a=S.diagAns;
+  const sx=a[1]||'m';
+  const twnIdx=a[2]!=null?a[2]:2;
+  const famOpt=a[3]!=null?a[3]:3;
+  const talOpt=a[4]!=null?a[4]:3;
+  const strongKey=a[5]||'math';
+  const weakKey=a[6]&&a[6]!=='none'?a[6]:null;
+
+  const famMap=[4,0,1,2,3];
+  const famStat=[[0,5,5,0],[0,5,0,5],[0,3,3,0],[0,0,0,8],[0,6,4,0]];
+  const talMap=[0,4,5,1,2,2,3];
+  const talStat=[[0,0,6,-2],[0,0,6,0],[0,0,6,0],[0,5,0,0],[18,6,0,8],[0,12,6,0],[0,5,0,12]];
+
+  const b={f:famMap[famOpt],t:twnIdx,k:talMap[talOpt]};
+  S.b=b;
+  S.sx=sx;
+  PSX=sx;
+  applySex(sx);
+  const base=st0(b,S.si);
+  S.a=base.a;
+  S.p=base.p;
+  init();
+
+  S.sk={s:strongKey,w:weakKey};
+  const cur=getCurriculum(S);
+  cur.forEach((c,i)=>{
+    if(c.key===strongKey)S.subA[i]=Math.min(AMAX(S),S.subA[i]+3.0);
+    if(weakKey&&c.key===weakKey)S.subA[i]=Math.max(25,S.subA[i]-2.0);
+  });
+  syncOverallFromSubs(S);
+  S.a0=S.a;
+  S.p0=S.p;
+
+  const fs=famStat[famOpt],ts=talStat[talOpt];
+  S.h=cl(S.h+fs[0]+ts[0]);
+  S.m=cl(S.m+fs[1]+ts[1]);
+  S.c=cl(S.c+fs[2]+ts[2]);
+  S.y=cl(S.y+fs[3]+ts[3]);
+
+  // 二つ名（タイプ名）と解説の判定
+  let title='バランス型の堅実チャレンジャー';
+  let desc='自分の長所と弱点を客観的に見つめ、計画的に合格をつかみ取るタイプ。';
+  if(talOpt===0){
+    title='知的好奇心あふれる本の虫ギフテッド';
+    desc='圧倒的な吸収力と知識量を誇る天才肌。全教科を高いレベルでまとめ上げる力がある！';
+  }else if(talOpt===1){
+    title='論理と閃きの理数マスター';
+    desc='数字や法則を直感で捉える理系スペシャリスト。算数・数学や理科でライバルに大差をつける！';
+  }else if(talOpt===2){
+    title='言葉と物語を操る文系スペシャリスト';
+    desc='読解力と言語センスがずば抜けた文系肌の秀才。国語・英語・社会で圧倒的な強さを見せる！';
+  }else if(famOpt===4&&twnIdx===3){
+    title='逆境を跳ね返すハングリー下剋上型';
+    desc='恵まれない環境をバネに自分の力で道を切り開く不屈の闘志の持ち主！';
+  }else if(talOpt===4){
+    title='体力自慢のタフネス逆転チャレンジャー';
+    desc='抜群の体力とメンタルのタフさが武器！直前期の追い込みでも体調を崩さず粘り勝つ！';
+  }else if(talOpt===5){
+    title='毎日積み上げる不屈の努力家';
+    desc='高いやる気と継続力で、1日1日の積み上げを確実に偏差値へ変えていく王道の優等生！';
+  }else if(talOpt===3){
+    title='要領抜群のスマート攻略タイプ';
+    desc='ポイントを押さえて効率よく吸収するセンス型。時間配分次第で難関校も射程圏内！';
+  }else if(talOpt===6){
+    title='自由な発想のマイペース探究者';
+    desc='周囲に流されず自分のペースを貫く大器晩成型。青春も楽しみながら自分らしい進路を目指す！';
+  }
+
+  S.bg=title;
+  S.diagDesc=desc;
+  dflt();
+}
+
+function Diag(){
+  show('diag');
+  const st=S.diagStep||0;
+  const totalQ=6;
+
+  // Step 7: 診断結果（鑑定書）画面
+  if(st>=7){
+    const K=['f','t','k'],N=['家庭環境','地元','才能'],T=[FAM,TWN,TAL];
+    const rList=K.map((x,i)=>{
+      const r=S.b[x];
+      return`<div class="border-2 p-2 text-left text-xs" style="border-color:${CC[r]}">
+        <span class="text-[10px] text-neutral-300">${N[i]}ランク</span><br>
+        <b style="color:${CC[r]}">${RA[r]}</b>　${T[i][r][0]}
+      </div>`;
+    }).join('');
+
+    H('screen-diag').innerHTML=`
+      <div class="rpg-window p-2.5 flex items-center justify-between">
+        <span class="text-xs sm:text-sm font-bold text-amber-300">▼ あなたの受験生タイプ診断書</span>
+        <button onclick="diagBack()" class="rpg-cmd text-xs px-2.5 py-1.5 min-h-[36px]">
+          <span class="cursor-arrow">▶</span> 質問に戻る
+        </button>
+      </div>
+
+      <div class="rpg-window-gold p-3.5 space-y-3 animate-retro-pop">
+        <div class="text-center space-y-1 border-b border-yellow-300/40 pb-2.5">
+          <div class="inline-block border border-amber-300 bg-[#08080c] text-amber-300 text-[10px] px-2.5 py-0.5">
+            ★ 診断完了（${ED[S.ed][0]}・${S.sx==='f'?'♀女の子':'♂男の子'}） ★
+          </div>
+          <div class="text-base sm:text-lg font-bold text-yellow-300 pt-1">${S.bg}</div>
+          <p class="text-[11px] text-neutral-200 leading-relaxed">${S.diagDesc}</p>
+        </div>
+
+        <div class="space-y-1.5">
+          <div class="text-xs font-bold text-amber-300">▼ あなたの生まれガチャ換算性能</div>
+          ${rList}
+        </div>
+
+        <div class="border border-neutral-600 bg-[#0c0c14] p-2.5 space-y-2 text-xs">
+          <div class="flex justify-between items-center border-b border-neutral-700 pb-1.5">
+            <span class="text-neutral-300">初期実力偏差値</span>
+            <span class="text-base font-bold text-yellow-300">${S.a.toFixed(1)}</span>
+          </div>
+          <div class="grid grid-cols-4 gap-1 text-center text-[11px]">
+            <div class="border border-neutral-700 py-1"><span class="text-neutral-400 block text-[9px]">体調</span><b class="text-sky-300">${Math.round(S.h)}</b></div>
+            <div class="border border-neutral-700 py-1"><span class="text-neutral-400 block text-[9px]">やる気</span><b class="text-emerald-300">${Math.round(S.m)}</b></div>
+            <div class="border border-neutral-700 py-1"><span class="text-neutral-400 block text-[9px]">自信</span><b class="text-amber-300">${Math.round(S.c)}</b></div>
+            <div class="border border-neutral-700 py-1"><span class="text-neutral-400 block text-[9px]">青春</span><b class="text-purple-300">${Math.round(S.y)}</b></div>
+          </div>
+          <div class="flex justify-between text-[11px] pt-0.5">
+            <span>得意：<b class="text-emerald-300">${SUBN[S.sk.s]}（1.3倍）</b></span>
+            <span>苦手：<b class="${S.sk.w?'text-red-400':'text-neutral-300'}">${S.sk.w?SUBN[S.sk.w]+'（0.8倍）':'なし'}</b></span>
+          </div>
+        </div>
+
+        <div class="space-y-1">
+          <label for="diag-player-name" class="block text-xs text-yellow-300">▶ あなたの名前（変更可）</label>
+          <input id="diag-player-name" type="text" maxlength="10" value="${S.name||'ロト'}"
+            oninput="if(S)S.name=this.value"
+            class="w-full bg-[#08080c] border-2 border-white focus:border-yellow-300 px-3 py-2 text-sm text-white outline-none min-h-[42px]"
+            placeholder="名前（10文字まで）">
+        </div>
+
+        <div class="space-y-2 pt-1">
+          ${btn("S.name=(H('diag-player-name').value||'ロト').slice(0,10);go('setup')",'この診断結果で塾・志望校を選ぶ！','text-yellow-300 border-yellow-300 bg-[#111936]')}
+          ${btn('startDiag()','最初から診断し直す','text-neutral-200')}
+        </div>
+      </div>`;
+    return;
+  }
+
+  // 質問定義（Step 0: コース選択、Step 1〜6: 診断質問）
+  const subs=S.si===0?[['math','算数'],['jpn','国語'],['sci','理科'],['soc','社会']]:[['eng','英語'],['math','数学'],['jpn','国語'],['sci','理科'],['soc','社会']];
+  const questions=[
+    {
+      badge:'STEP 0 / 準備',
+      q:'どの受験コースであなたの人生を試す？',
+      sub:'選んだコースに合わせて、次の質問の科目や受験ルートが決まります。',
+      opts:Object.keys(ED).map(k=>[k,ED[k][0],ED[k][1]])
+    },
+    {
+      badge:'Q1 / 6',
+      q:'あなたの性別は？',
+      sub:'男子校・女子校の受験資格や、共学校の合格ラインに反映されます。',
+      opts:[['m','♂ 男の子','男子校・共学校を受験できます'],['f','♀ 女の子','女子校・共学校を受験できます']]
+    },
+    {
+      badge:'Q2 / 6（成り立ち①）',
+      q:'育った街・まわりの環境はどれに近い？',
+      sub:'ガチャの「地元ランク」を決定します。',
+      opts:[
+        [0,'都心・駅近で塾が選び放題の環境だった','地元 UR（日本屈指の環境都市）'],
+        [1,'進学校や塾が多く、勉強が当たり前の街だった','地元 SSR（教育環境トップの都心）'],
+        [2,'そこそこ便利で、塾も学校もひと通りそろっていた','地元 SR（塾も学校も充実した街）'],
+        [3,'電車やバスで通う、ふつうの地方都市だった','地元 R（ふつうの地方都市）'],
+        [4,'塾まで遠く、親の送迎や自宅学習が中心だった','地元 N（塾が遠い田舎）']
+      ]
+    },
+    {
+      badge:'Q3 / 6（成り立ち②）',
+      q:'家の雰囲気・教育方針はどれに近い？',
+      sub:'ガチャの「家庭環境ランク」と初期メンタルを決定します。',
+      opts:[
+        [0,'親も高学歴で、勉強のサポートや環境が万全だった','家庭 UR（両親が東大卒の家）＋自信・やる気UP'],
+        [1,'習い事や塾など、やりたいことを全力応援してくれた','家庭 SSR（教育一家の超裕福な家）＋やる気・青春UP'],
+        [2,'教育熱心で、しっかり面倒を見てくれる家だった','家庭 SR（裕福で教育熱心な家）＋やる気・自信UP'],
+        [3,'自由放任でマイペースに育てられた','家庭 R（ごく普通の家庭）＋初期青春UP'],
+        [4,'節約志向で、自分の力で道を切り開く家だった','家庭 N（経済的にきびしい家）＋ハングリー精神UP']
+      ]
+    },
+    {
+      badge:'Q4 / 6（成り立ち③）',
+      q:'小さい頃の過ごし方・タイプに一番近いのは？',
+      sub:'ガチャの「才能（地頭）ランク」と初期ステータスを決定します。',
+      opts:[
+        [0,'本や図鑑を読みふけり、何でもすぐ吸収していた','才能 SSR（神童レベルの地頭）＋初期自信UP'],
+        [1,'パズル・計算・工作に熱中する理数キッズだった','才能 UR（理系科目が超伸びる）＋初期自信UP'],
+        [2,'言葉遊び・読書・外国語や歴史にハマっていた','才能 UR（文系科目が超伸びる）＋初期自信UP'],
+        [3,'新しいことを覚える要領の良さがあった','才能 SR（覚えが早い）＋初期やる気UP'],
+        [4,'外で遊び回る体力お化けだった','才能 R ＋ 初期体調+18・やる気+6・青春+8'],
+        [5,'習い事や宿題を毎日コツコツ続けていた','才能 R ＋ 初期やる気+12・自信+6'],
+        [6,'マイペースで自分の世界を大切にしていた','才能 N ＋ 初期青春+12・やる気+5']
+      ]
+    },
+    {
+      badge:'Q5 / 6（科目適性①）',
+      q:'一番得意（または好き）な科目は？',
+      sub:'選んだ科目は初期偏差値＋3.0 ＆ 成長スピード1.3倍になります！',
+      opts:subs.map(([k,n])=>[k,n,`${n}の偏差値が伸びやすくなります`])
+    },
+    {
+      badge:'Q6 / 6（科目適性②）',
+      q:'正直ニガテ（または後回しにしがち）な科目は？',
+      sub:'選んだ科目は初期偏差値−2.0 ＆ 成長スピード0.8倍になります。',
+      opts:subs.filter(([k])=>k!==S.diagAns[5]).map(([k,n])=>[k,n,`${n}は意識して勉強時間を割り振る必要があります`]).concat([['none','特になし（全科目バランス型）','苦手科目によるマイナス補正なし']])
+    }
+  ];
+
+  const curQ=questions[st];
+  const progressPct=st===0?5:Math.round((st/totalQ)*100);
+
+  H('screen-diag').innerHTML=`
+    <div class="rpg-window p-2.5 flex items-center justify-between">
+      <span class="text-xs sm:text-sm font-bold text-amber-300">▼ あなたの診断（${curQ.badge}）</span>
+      <button onclick="diagBack()" class="rpg-cmd text-xs px-2.5 py-1.5 min-h-[36px]">
+        <span class="cursor-arrow">▶</span> ${st===0?'タイトルへ':'1つ戻る'}
+      </button>
+    </div>
+
+    <div class="rpg-window p-3 space-y-3 animate-retro-pop">
+      <div class="space-y-1">
+        <div class="flex justify-between text-[10px] text-neutral-300">
+          <span>診断進行度</span>
+          <span>${st===0?'コース選択':`第 ${st} 問 / 全 ${totalQ} 問`}</span>
+        </div>
+        <div class="w-full h-2 bg-neutral-900 border border-neutral-700">
+          <div class="h-full bg-amber-300 transition-all" style="width:${progressPct}%"></div>
+        </div>
+      </div>
+
+      <div class="border-t border-b border-neutral-700 py-2.5 space-y-1">
+        <div class="text-sm sm:text-base font-bold text-yellow-300 leading-snug">${curQ.q}</div>
+        <p class="text-[11px] text-neutral-300 leading-relaxed">${curQ.sub}</p>
+      </div>
+
+      <div class="space-y-2">
+        ${curQ.opts.map(([val,label,hint])=>{
+          const selected=S.diagAns[st]===val;
+          const arg=typeof val==='string'?`'${val}'`:val;
+          return`<button onclick="diagPick(${st},${arg})" class="rpg-cmd w-full p-2.5 min-h-[48px] text-left ${selected?'border-yellow-300 text-yellow-300 bg-[#141a33]':''}">
+            <div class="text-xs sm:text-sm font-bold"><span class="cursor-arrow">▶</span> ${label}</div>
+            ${hint?`<div class="text-[10px] text-neutral-300 pl-3.5 mt-0.5">${hint}</div>`:''}
+          </button>`;
+        }).join('')}
+      </div>
+    </div>`;
+}
+
+function Home(){S=null;show('top');const r=ld('jg_r')||{pl:[],tt:{}},s=ld('jg_s');
+ H('stat-my-play-count').textContent=(r.n||r.pl.length)+' 回';H('stat-conquered-unis').textContent=Object.keys(r.sch||{}).length;H('stat-total-unis').textContent=SCH.reduce((x,l)=>x+l.length,0);
+ H('stat-unlocked-titles').textContent=Object.keys(r.tt).length;H('stat-max-titles').textContent=TT.length;
+ const cb=(f,t,sub,c,bl)=>`<button onclick="${f}" class="rpg-cmd w-full py-3.5 px-3 min-h-[54px] text-left text-sm font-bold ${c}"><span class="cursor-arrow${bl?' always-blink':''}">▶</span> ${t}<span class="block text-[11px] font-normal text-neutral-300 mt-0.5 pl-4">${sub}</span></button>`;
+ H('edition-buttons').innerHTML=(s&&!s.over&&s.v?cb('cont()','つづきから再開する',lab(s)+'｜'+ST[s.si],'text-emerald-300 border-emerald-300 bg-[#071a12]',1):'')+cb('startDiag()','★ あなたの診断から始める','性別・成り立ち・得意科目からガチャ性能を診断！','text-amber-300 border-amber-300 bg-[#1a1303]',!(s&&!s.over&&s.v))+Object.keys(ED).map((k,i)=>cb(`newG('${k}')`,ED[k][0],ED[k][1],i?'text-sky-300 border-sky-300':'text-yellow-300 border-yellow-300 bg-[#111936]',false)).join('')+'<div class="grid grid-cols-2 gap-2"><button onclick="bkExport()" class="rpg-cmd py-2 min-h-[44px] text-xs">バックアップ</button><button onclick="bkImport()" class="rpg-cmd py-2 min-h-[44px] text-xs">復元</button></div>';
+ H('my-records-list').innerHTML=r.pl.map(p=>`<div class="border border-neutral-600 p-2.5 text-xs"><span class="text-[10px] text-neutral-400">${p[3]}　${p[0]}</span><br><span class="text-yellow-300 font-bold">${p[1]}</span>　スコア ${p[2].toLocaleString()}</div>`).join('')||'<p class="text-xs text-neutral-400 py-2 text-center">まだ戦歴はありません</p>';
+ H('btn-open-reset').classList.toggle('hidden',!r.pl.length)}
+
+function cont(){
+  S=ld('jg_s');
+  if(S){
+    S.mocks=S.mocks||[];
+    S.mockMode=S.mockMode||'auto';
+    S.ui=S.ui||{hideStat:false,hideLog:false};
+    const cur=getCurriculum(S);
+    if(!S.subA||S.subA.length!==cur.length)S.subA=cur.map(()=>S.a);
+    if(!S.subHrs||S.subHrs.length!==cur.length)S.subHrs=distributeIntHours(BASE_WEEK_HRS[S.si],cur.map(c=>c.w));
+    if(S.lastMock==null&&S.mocks.length)S.lastMock=S.mocks[S.mocks.length-1].score;
+  }
+  R();
+}
+function newG(k){S={ed:k,stages:ED[k][2],k:0,si:ED[k][2][0],t:0,seed:Math.random()*1e9|0,b:{},ex:true,rr:1,name:'ロト',log:[],mocks:[],avgMock:null,lastMock:null,mockMode:'auto',mockIdx:null,ui:{hideStat:false,hideLog:false}};go('setup')}
+function rerollG(){S.rr--;rollG()}
+
+function setMockSetting(mode,idx,inModal){
+  S.mockMode=mode;
+  if(mode==='manual')S.mockIdx=idx;
+  save();
+  if(inModal)renderTargetModal();
+  if(S.v==='setup')renderSetupMockAndList();
+  if(S.v==='play')Play();
+}
+
+function selectTargetSchool(i,inModal){
+  S.fi=i;
+  save();
+  if(inModal){
+    renderTargetModal();
+    if(S.v==='play')Play();
+  }else{
+    renderSetupMockAndList();
+  }
+}
+
+/* =================================================================
+   模試 個人成績返却票モーダル表示（模試受験月に自動ポップアップ＋履歴閲覧）
+   ================================================================= */
+function openMockReportModal(mockIdx){
+  if(!S||!S.mocks||!S.mocks.length)return;
+  const idx=mockIdx!=null?mockIdx:S.mocks.length-1;
+  const m=S.mocks[idx];
+  if(!m)return;
+
+  const avgUpTo=(S.mocks.slice(0,idx+1).reduce((a,b)=>a+b.score,0)/(idx+1)).toFixed(1);
+  if(typeof RetroAudio!=='undefined'){
+    const jSe=(m.judgment==='A'||m.judgment==='B')?'mock_good':(m.judgment==='C'?'mock_mid':'mock_low');
+    RetroAudio.playSE(jSe);
+  }
+  const jColor=({A:'text-emerald-300 border-emerald-300',B:'text-sky-300 border-sky-300',C:'text-yellow-300 border-yellow-300',D:'text-orange-400 border-orange-400',E:'text-red-400 border-red-400'})[m.judgment]||'text-white border-white';
+  const passComment=({
+    A:'【安全圏】合格可能性80%以上！この調子で盤石に固めよう。',
+    B:'【有力圏】合格可能性65%前後！十分に合格が狙える位置。',
+    C:'【ボーダー圏】合格可能性50%！弱点科目の底上げがカギ。',
+    D:'【努力圏】合格可能性30%！配分時間を見直して追い上げよう。',
+    E:'【要奮起】合格可能性20%未満。基礎から学習計画を立て直そう。'
+  })[m.judgment]||'';
+
+  H('modal-mock-report-body').innerHTML=`
+    <div class="border-2 border-amber-300 bg-[#120e02] p-2.5 space-y-1">
+      <div class="flex justify-between items-center text-[11px]">
+        <span class="text-amber-300 font-bold">${m.lab} 実施</span>
+        <span class="text-neutral-300">${m.jumpPen>0?`【飛び級-${m.jumpPen}】`:''}${m.tag}</span>
+      </div>
+      <div class="text-sm font-bold text-white">${m.name}</div>
+      <div class="text-[11px] text-neutral-300">受験者：${S.name||'ロト'}（${ST[S.si]}${S.bunri==='bun'?'・文系':S.bunri==='ri'?'・理系':''}）</div>
+    </div>
+
+    <!-- 総合偏差値・得点・志望校判定 -->
+    <div class="grid grid-cols-3 gap-1.5 text-center">
+      <div class="border-2 border-yellow-300 bg-[#141103] p-2">
+        <div class="text-[10px] text-neutral-300">総合偏差値</div>
+        <div class="text-lg font-bold text-yellow-300">${m.score.toFixed(1)}</div>
+        <div class="text-[10px] text-emerald-300">平均 ${avgUpTo}</div>
+      </div>
+      <div class="border border-neutral-600 bg-[#0c0c14] p-2">
+        <div class="text-[10px] text-neutral-300">合計得点</div>
+        <div class="text-sm font-bold text-white mt-0.5">${m.totScore}<span class="text-[10px] text-neutral-400">/${m.totMax}</span></div>
+        <div class="text-[10px] text-sky-300">上位 ${m.natTopPct.toFixed(1)}%</div>
+      </div>
+      <div class="border-2 ${jColor} bg-[#0c0c14] p-2">
+        <div class="text-[10px] text-neutral-300">志望校判定</div>
+        <div class="text-lg font-bold ${jColor.split(' ')[0]}">${m.judgment}判定</div>
+        <div class="text-[10px] text-neutral-300">目安 ${m.targetDev}</div>
+      </div>
+    </div>
+
+    <!-- 全国順位 ＆ 第一志望者内順位 -->
+    <div class="border border-neutral-600 bg-[#0c0c14] p-2.5 space-y-1.5">
+      <div class="text-yellow-300 font-bold text-[11px]">▼ 順位・母集団データ</div>
+      <div class="flex justify-between text-xs border-b border-neutral-800 pb-1">
+        <span class="text-neutral-300">全国総合順位</span>
+        <span><b class="text-yellow-300">${m.natRank.toLocaleString()} 位</b> / ${m.pop.toLocaleString()}人中</span>
+      </div>
+      <div class="flex justify-between text-xs">
+        <span class="text-neutral-300 truncate pr-2">第一志望内（${m.targetName}）</span>
+        <span class="shrink-0"><b class="text-sky-300">${m.targetRank.toLocaleString()} 位</b> / ${m.targetPop.toLocaleString()}人</span>
+      </div>
+      <div class="text-[10px] text-neutral-300 pt-0.5">${passComment}</div>
+    </div>
+
+    <!-- 各教科別 偏差値・得点・前回比・順位テーブル -->
+    <div class="space-y-1.5">
+      <div class="text-amber-300 font-bold text-[11px]">▼ 教科別 成績詳細（偏差値・得点・科目順位）</div>
+      ${(m.subs||[]).map(sub=>{
+        const barW=Math.max(8,Math.min(100,(sub.dev-25)*1.65));
+        const dTxt=sub.delta==null?'(初)':sub.delta>=0?`(+${sub.delta.toFixed(1)})`:`(${sub.delta.toFixed(1)})`;
+        const dCol=sub.delta==null?'text-neutral-400':sub.delta>=0?'text-emerald-300':'text-red-400';
+        const devCol=sub.dev>=65?'text-yellow-300':sub.dev>=55?'text-sky-300':sub.dev>=45?'text-white':'text-red-400';
+        return`<div class="border border-neutral-700 bg-[#0c0c14] p-2 space-y-1">
+          <div class="flex justify-between items-center text-xs">
+            <span class="font-bold text-white">${sub.name}</span>
+            <span>偏差値 <b class="${devCol} text-sm">${sub.dev.toFixed(1)}</b> <span class="text-[10px] ${dCol}">${dTxt}</span></span>
+          </div>
+          <div class="flex justify-between text-[10px] text-neutral-300">
+            <span>得点：${sub.score} / ${sub.maxPts}点</span>
+            <span>科目順位：${sub.rank.toLocaleString()}位（上位${sub.topPct.toFixed(1)}%）</span>
+          </div>
+          <div class="w-full h-1.5 bg-neutral-900"><div class="h-full bg-amber-300" style="width:${barW}%"></div></div>
+        </div>`;
+      }).join('')}
+    </div>
+
+    <div class="pt-1">
+      ${btn("closeModal('modal-mock-report')",'成績票を閉じて受験生活へ戻る','text-yellow-300 border-yellow-300 bg-[#111936]')}
+    </div>`;
+  openModal('modal-mock-report');
+}
+
+function st1(){
+  const o=lab(S),wTotal=getTotalWeekHrs(S);
+  step(S);
+  if(S.lastMockRec){
+    const r=S.lastMockRec;
+    const jumpStr=r.jumpPen>0?`【飛び級-${r.jumpPen}】`:'';
+    S.log.push(`【模試】${o}：${jumpStr}${r.name} → 総合 ${r.score.toFixed(1)}（${r.judgment}判定／全国${r.natRank.toLocaleString()}位）${S.msg?' ＊'+S.msg:''}`);
+  }else{
+    const avgTxt=S.avgMock!=null?`平均 ${S.avgMock.toFixed(1)} 維持`:'模試なし';
+    S.log.push(`${o}：週${wTotal}h学習（${avgTxt}）${S.msg?' ＊'+S.msg:''}`);
+  }
+  S.log=S.log.slice(-40);
+}
+
+function Play(){
+  if(S.t>=S.len){
+    if(S.ex===false)return nx2();
+    if(S.si===2){
+      if(!S.kt)runKyotsu(S);
+      return go('kt');
+    }
+    return go('app');
+  }
+  S.mocks=S.mocks||[];
+  S.mockMode=S.mockMode||'auto';
+  S.ui=S.ui||{hideStat:false,hideLog:false};
+  const cur=getCurriculum(S);
+  if(!S.subA||S.subA.length!==cur.length)S.subA=cur.map(()=>S.a);
+  if(!S.subHrs||S.subHrs.length!==cur.length)S.subHrs=distributeIntHours(BASE_WEEK_HRS[S.si],cur.map(c=>c.w));
+
+  const _y=window.scrollY,_same=window._curScr==='game';
+  show('game');
+
+  const L=SCH[S.si],f=L[S.fi],ne=S.ex===false,spec=getMockSpec(S);
+  const jumpPen=calcJumpPenalty(S,spec);
+  const hasMock=S.mocks.length>0&&S.avgMock!=null;
+  const dispDev=hasMock?S.avgMock:null;
+  const lastDev=hasMock?(S.lastMock!=null?S.lastMock:S.mocks[S.mocks.length-1].score):null;
+  const df=hasMock?(dispDev-examT(spec,f)):-99;
+  const j=judgeDf(df);
+  const m=Math.min(S.h,S.m);
+  const T=(i,v)=>H(i).textContent=v;
+
+  T('game-chapter-title',ST[S.si]+(S.len>34?'（浪人）':''));
+  T('game-month-title',lab(S));
+  T('game-turns-left','あと '+(S.len-S.t));
+
+  // 文理選択バッジ表示
+  const bBadge=H('hud-bunri-badge');
+  if(S.si===2&&S.bunri){
+    bBadge.classList.remove('hidden');
+    if(S.bunri==='bun'){
+      bBadge.textContent='文系';
+      bBadge.className='text-[10px] px-1.5 py-0.5 font-bold shrink-0 border border-amber-300 text-amber-300 bg-[#1a1302]';
+    }else{
+      bBadge.textContent='理系';
+      bBadge.className='text-[10px] px-1.5 py-0.5 font-bold shrink-0 border border-sky-300 text-sky-300 bg-[#051629]';
+    }
+  }else{
+    bBadge.classList.add('hidden');
+  }
+
+  T('hud-hero-name',S.name||'ロト');
+  T('hud-trait-tag',TAL[S.b.k][0]+(S.juku!=null?'・'+JUKU[S.si][S.juku][0]:''));
+
+  if(ne){
+    T('hud-judgment','内部進学');
+    H('hud-judgment').className='text-xs font-bold text-emerald-300';
+  }else if(!hasMock){
+    T('hud-judgment','未判定');
+    H('hud-judgment').className='text-xs font-bold text-neutral-400';
+  }else{
+    T('hud-judgment',j+'判定');
+    H('hud-judgment').className='text-sm font-bold '+({A:'text-emerald-300',B:'text-sky-300',C:'text-yellow-300',D:'text-orange-400',E:'text-red-400'})[j];
+  }
+
+  // 平均偏差値 & 直近模試偏差値 デュアル表示
+  if(hasMock){
+    T('hud-dev',dispDev.toFixed(1));
+    T('hud-dev-diff',`(${S.mocks.length}回)`);
+    H('hud-dev-diff').className='text-[10px] text-emerald-300';
+
+    T('hud-last-dev',lastDev.toFixed(1));
+    if(S.mocks.length>=2){
+      const prev=S.mocks[S.mocks.length-2].score;
+      const d=Math.round((lastDev-prev)*10)/10;
+      T('hud-last-diff',d>=0?`(+${d.toFixed(1)})`:`(${d.toFixed(1)})`);
+      H('hud-last-diff').className='text-[10px] '+(d>=0?'text-emerald-300':'text-red-400');
+    }else{
+      T('hud-last-diff','(初回)');
+      H('hud-last-diff').className='text-[10px] text-neutral-400';
+    }
+  }else{
+    T('hud-dev','未受験');
+    T('hud-dev-diff',nextMockLabel(S));
+    H('hud-dev-diff').className='text-[10px] text-neutral-400';
+
+    T('hud-last-dev','未受験');
+    T('hud-last-diff','―');
+    H('hud-last-diff').className='text-[10px] text-neutral-400';
+  }
+
+  T('hud-stamina-text',Math.round(S.h));H('hud-stamina-bar').style.width=S.h+'%';
+  T('hud-mental-text',Math.round(S.m));H('hud-mental-bar').style.width=S.m+'%';
+  T('hud-pastpaper-tag',Math.round(S.c));H('hud-conf-bar').style.width=S.c+'%';
+  T('hud-knowledge',Math.round(S.y));H('hud-youth-bar').style.width=S.y+'%';
+
+  const bTag=f[2]?.bunri&&f[2].bunri!=='共'?`[${f[2].bunri}]`:'';
+  T('hud-target-uni',ne?`${S.jhSchool?S.jhSchool+'から内部進学':'高校受験しない'}（受験なし）`:`第一志望：${f[0]}${bTag} (目安 ${f[1]})`);
+  const btnTgt=H('btn-hud-target'),btnHs=H('btn-hs-exam-toggle');
+  if(btnTgt)btnTgt.classList.toggle('hidden',ne);
+  if(btnHs){
+    btnHs.classList.toggle('hidden',S.si!==1);
+    if(S.si===1){
+      btnHs.textContent=ne?'やっぱりやる':'やっぱり辞める';
+      btnHs.className='rpg-cmd text-[11px] px-2 py-1 min-h-[32px] shrink-0 '+(ne?'text-yellow-300 border-yellow-300':'text-red-400 border-red-400');
+    }
+  }
+  const jumpBadge=jumpPen>0?`【飛び級-${jumpPen}】`:'';
+  T('hud-mock-info',ne?'模試対象外':`模試：${jumpBadge}${spec.name}（${nextMockLabel(S)}）`);
+  H('status-window-box').className=(m<=25?'rpg-window-danger':m<=50?'rpg-window-warn':'rpg-window')+' p-2.5 space-y-2';
+
+  // ステータス「引っ込める」制御
+  const hideStat=!!S.ui.hideStat;
+  H('status-detail-body').classList.toggle('hidden',hideStat);
+  H('hud-mini-stats').classList.toggle('hidden',!hideStat);
+  T('hud-mini-stats',`体${Math.round(S.h)} や${Math.round(S.m)} 自${Math.round(S.c)} 青${Math.round(S.y)}`);
+  T('toggle-stat-label',hideStat?'▼ 開く':'▲ 引っ込める');
+
+  // 受験日誌「引っ込める」制御
+  const hideLog=!!S.ui.hideLog;
+  const latestLog=S.log.length?S.log[S.log.length-1]:'受験日誌のはじまり。（模試は4・6・9・11・1月に実施）';
+  H('game-log-box').classList.toggle('hidden',hideLog);
+  H('game-log-mini').classList.toggle('hidden',!hideLog);
+  T('game-log-mini',latestLog);
+  T('toggle-log-label',hideLog?'▼ 開く':'▲ 引っ込める');
+  const lb=H('game-log-box');
+  lb.innerHTML=S.log.slice(-15).map(x=>`<p class="${x.startsWith('【模試】')?'text-amber-300':x.startsWith('出来事')?'text-sky-300':''}">${x}</p>`).join('')||`<p>${latestLog}</p>`;
+  lb.scrollTop=lb.scrollHeight;
+
+  // コマンド／イベント／週間1時間単位勉強配分パネル描画
+  const cmd=(f,t,d,on)=>`<button onclick="${f}" class="rpg-cmd p-2.5 min-h-[48px] text-left ${on?'border-yellow-300 text-yellow-300 bg-[#141a33]':''}"><div class="text-xs sm:text-sm font-bold"><span class="cursor-arrow">▶</span> ${t}</div>${d?`<div class="text-[10px] text-neutral-300 pl-3.5 mt-0.5 leading-snug">${d}</div>`:''}</button>`;
+
+  if(S.ev==='bunri'){
+    H('command-panel').className='rpg-window-gold p-3 space-y-2.5 animate-retro-pop';
+    H('command-panel').innerHTML=`
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-bold text-yellow-300">★ 重要イベント：高1 11月 文理選択 ★</span>
+        <span class="text-[10px] text-amber-300">必須選択</span>
+      </div>
+      <div class="text-sm font-bold text-white border-b border-yellow-300/40 pb-2 leading-snug">
+        進路調査の最終提出！文系・理系どちらのコースに進む？
+      </div>
+      <p class="text-[11px] text-neutral-300 leading-relaxed">
+        選択すると週間勉強配分の科目と模試の集計科目が切り替わります。（現在の第一志望：${f[0]} ${bTag}）
+      </p>
+      <div class="grid grid-cols-1 gap-2">
+        ${cmd('pick(0)','文系コースに進む（英語・国語・地歴公民重視）','文系学部向け。理系・医学部志望だと二次試験で不利になります。',false)}
+        ${cmd('pick(1)','理系コースに進む（英語・数学・理科重視）','理系・医歯薬学部向け。文系学部志望だと二次試験で不利になります。',false)}
+      </div>`;
+  }else if(S.ev==='elec'){
+    const k=elecNext(S),opts=ELEC[S.bunri][k];
+    H('command-panel').className='rpg-window-gold p-3 space-y-2.5 animate-retro-pop';
+    H('command-panel').innerHTML=`<div class="flex items-center justify-between"><span class="text-xs font-bold text-yellow-300">★ 科目選択</span><span class="text-[10px] text-amber-300">必須選択</span></div><div class="text-sm font-bold text-white leading-snug">受験で使う${k==='soc'?'地歴公民':'理科'}を選ぼう</div><div class="grid grid-cols-1 gap-2">${opts.map((o,i)=>cmd(`pick(${i})`,o[0],o[3],false)).join('')}</div>`;
+  }else if(S.ev!=null){
+    H('command-panel').className='rpg-window-gold p-3 space-y-2.5 animate-retro-pop';
+    H('command-panel').innerHTML=`<div class="flex items-center justify-between"><span class="text-xs font-bold text-yellow-300">★ 出来事発生！</span><span class="text-[10px] text-neutral-300">選択してください</span></div><div class="text-sm font-bold text-white border-b border-yellow-300/40 pb-2 leading-snug">${EV[S.ev][0]}</div><div class="grid grid-cols-1 gap-2">${[0,1].map(i=>cmd(`pick(${i})`,EV[S.ev][i+1][0],effTxt(EV[S.ev][i+1][1],EV[S.ev][i+1][2]))).join('')}</div>`;
+  }else{
+    H('command-panel').className='rpg-window p-3 space-y-2.5';
+    const nextIsMock=!ne&&isMockMonth(S);
+    const goLabel=nextIsMock?(jumpPen>0?`1か月すごす（★飛び級模試 -${jumpPen}！）`:'1か月すごす（★今月は模試＋成績返却！）'):'1か月すごす';
+    const weekTotal=getTotalWeekHrs(S);
+    const baseW=BASE_WEEK_HRS[S.si];
+    const presets=PACE_WEEK_PRESETS[S.si];
+    const loadLabel=weekTotal<=presets[0]?'余裕あり（体力回復）':weekTotal<=presets[1]?'標準ペース':weekTotal<=presets[2]?'ハード（消耗あり）':'超ハード（体調注意！）';
+    const loadCol=weekTotal<=presets[0]?'text-emerald-300':weekTotal<=presets[1]?'text-sky-300':weekTotal<=presets[2]?'text-amber-300':'text-red-400';
+
+    H('command-panel').innerHTML=`
+      <div class="flex items-center justify-between gap-2">
+        <span class="text-xs text-yellow-300 font-bold">▼ 週間勉強時間配分</span>
+        <span class="text-[11px] font-bold ${loadCol} text-right">週 ${weekTotal}h（${loadLabel}）<span class="block text-[10px] text-neutral-400 font-normal">今の体力・やる気の上限：約${Math.floor(baseW*capRatio(S))}h</span></span>
+        <button onclick="togglePanel('hideStudy')" class="rpg-cmd px-2 py-1 min-h-[30px] text-[11px] shrink-0">${S.ui.hideStudy?'▼ 開く':'▲ たたむ'}</button>
+      </div>
+      <div class="${S.ui.hideStudy?'hidden':''} space-y-2.5">
+
+      <!-- ペースプリセット 4ボタン -->
+      <div class="grid grid-cols-4 gap-1">
+        ${PN.map((n,i)=>`<button onclick="applyPacePreset(${i})" class="rpg-cmd py-1.5 px-1 min-h-[38px] text-center text-[11px] ${weekTotal===presets[i]?'border-yellow-300 text-yellow-300 bg-[#141a33] font-bold':''}">${n}<span class="block text-[9px] text-neutral-300">${presets[i]}h/週</span></button>`).join('')}
+      </div>
+
+      <!-- 補助ボタン：均等配分 / 志望校特化 -->
+      <div class="flex items-center justify-between gap-1.5 text-[10px]">
+        <span class="text-neutral-400">※ 0時間の科目は演習不足で偏差値が下がります</span>
+        <div class="flex gap-1 shrink-0">
+          <button onclick="equalizeSubHours()" class="rpg-cmd px-2 py-1 min-h-[30px] text-neutral-200">均等</button>
+          <button onclick="optimizeSubHoursForTarget()" class="rpg-cmd px-2 py-1 min-h-[30px] text-amber-300 border-amber-300">志望校特化</button>
+        </div>
+      </div>
+
+      <!-- 科目別 1時間単位割り振りリスト -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+        ${cur.map((c,k)=>{
+          const h=S.subHrs[k]||0;
+          const req=Math.max(1,Math.round(baseW*c.w));
+          const trend=h===0?'↓下降':h<req*0.5?'↘微減':h>=req*1.3?'↑↑急伸':'↗上昇';
+          const tCol=h===0?'text-red-400':h<req*0.5?'text-orange-300':h>=req*1.3?'text-emerald-300':'text-sky-300';
+          return`<div class="border ${h===0?'border-red-400/60 bg-[#160608]':'border-neutral-700 bg-[#0c0c14]'} px-2 py-1.5 flex items-center justify-between gap-1">
+            <div class="min-w-0">
+              <div class="text-xs font-bold text-white truncate">${c.name} <span class="text-[10px] ${tCol}">${trend}</span></div>
+              <div class="text-[10px] text-neutral-400">目安 ${req}h/週</div>
+            </div>
+            <div class="flex items-center gap-1 shrink-0">
+              <button onclick="adjustSubHour(${k},-1)" ${h<=0?'disabled':''} class="rpg-cmd w-8 h-8 flex items-center justify-center text-sm font-bold text-white">-</button>
+              <span class="w-8 text-center text-xs font-bold ${h===0?'text-red-400':'text-yellow-300'}">${h}h</span>
+              <button onclick="adjustSubHour(${k},1)" class="rpg-cmd w-8 h-8 flex items-center justify-center text-sm font-bold text-yellow-300 border-yellow-300">+</button>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+      </div>
+
+      <div class="text-xs text-yellow-300 font-bold">▼ 今月の行動（1つ選ぶ）</div><div class="grid grid-cols-2 gap-1.5">${ACT.map((a,i)=>cmd(`S.act=${i};Play()`,a[0],a[1],(S.act||0)===i)).join('')}</div>
+      ${olyHtml(S)}
+      ${S.si===1?`<div class="border border-neutral-600 bg-[#0c0c14] px-2.5 py-2 flex items-center justify-between gap-2 text-xs">
+        <span class="truncate ${ne?'text-emerald-300':'text-sky-300'} font-bold">${ne?(S.jhSchool?S.jhSchool+'・内部進学中':'高校受験：しない'):'高校受験：する'}</span>
+        <button onclick="toggleHighSchoolExam(${ne?'true':'false'})" class="rpg-cmd px-2.5 py-1 min-h-[34px] text-[11px] font-bold shrink-0 ${ne?'text-yellow-300 border-yellow-300':'text-red-400 border-red-400'}">
+          <span class="cursor-arrow">▶</span> ${ne?'やっぱりやる':'やっぱり辞める'}
+        </button>
+      </div>`:''}
+      <!-- 進行ボタン群 -->
+      <div class="grid grid-cols-1 gap-2 pt-0.5">
+        ${btn('nx()',goLabel,'text-yellow-300 border-yellow-300 bg-[#111936]')}
+        <div class="grid grid-cols-2 gap-1.5">
+          <button onclick="auMock()" ${ne?'disabled':''} class="rpg-cmd py-2.5 px-2 min-h-[44px] text-xs font-bold text-amber-300 border-amber-300"><span class="cursor-arrow">▶</span> 次の模試まで</button>
+          <button onclick="au()" class="rpg-cmd py-2.5 px-2 min-h-[44px] text-xs font-bold text-sky-300 border-sky-300"><span class="cursor-arrow">▶</span> 出来事まで進める</button>
+        </div>
+      </div>`;
+  }
+  save();
+  {const e=H('hud-hero-name');if(e){e.textContent='';e.insertAdjacentHTML('beforeend',HERO+' ');e.append(S.name||'ロト')}}
+  if(_same)scrollTo(0,_y);
+}
+
+function pick(i){
+  if(S.ev==='elec'){
+    const k=elecNext(S),o=ELEC[S.bunri][k][i];
+    S.elec=S.elec||{};S.elec[k]=i;S.ev=null;
+    S.subHrs=distributeIntHours(getTotalWeekHrs(S)||BASE_WEEK_HRS[2],getCurriculum(S).map(c=>c.w));
+    S.log.push(`【重要】科目選択 →「${o[0]}」を選択！`);
+    if(typeof RetroAudio!=='undefined')RetroAudio.playSE('good');
+    Play();showToast(`＊ ${o[0]}を選択しました！`);return;
+  }
+  if(S.ev==='bunri'){
+    const label=i===0?'文系コース':'理系コース';
+    S.log.push(`【重要】高1 11月 文理選択 →「${label}」を選択！`);
+    pk(S,i);
+    if(typeof RetroAudio!=='undefined')RetroAudio.playSE('good');
+    Play();
+    showToast(`＊ ${label}を選択しました！`);
+    return;
+  }
+  const e=EV[S.ev];
+  const delta=(e&&e[i+1]&&e[i+1][1])||[0,0,0,0,0];
+  const isPositive=(delta[0]+delta[1]+delta[4]*4)>=0;
+  pk(S,i);S.log.push(`出来事「${e[0]}」→「${e[i+1][0]}」${S.evRes||''}`);
+  if(typeof RetroAudio!=='undefined')RetroAudio.playSE(isPositive?'good':'bad');
+  Play();if(S.evRes)showToast('＊ '+S.evRes);
+}
+
+function nx(){
+  st1();
+  const tookMock=!!S.lastMockRec;
+  if(typeof RetroAudio!=='undefined'){
+    RetroAudio.playSE('step');
+    if(S.ev!=null)setTimeout(()=>RetroAudio.playSE('event'),140);
+  }
+  Play();
+  if(tookMock)openMockReportModal(S.mocks.length-1);
+}
+
+function au(){
+  let n=0;
+  do{st1()}while(S.t<S.len&&S.ev==null&&++n<60);
+  const tookMock=!!S.lastMockRec;
+  if(typeof RetroAudio!=='undefined'){
+    RetroAudio.playSE('step');
+    if(S.ev!=null)setTimeout(()=>RetroAudio.playSE('event'),140);
+  }
+  Play();
+  if(tookMock)openMockReportModal(S.mocks.length-1);
+}
+
+function auMock(){
+  let n=0;
+  do{
+    st1();
+    if(S.lastMockRec)break;
+  }while(S.t<S.len&&S.ev==null&&++n<60);
+  const tookMock=!!S.lastMockRec;
+  if(typeof RetroAudio!=='undefined'){
+    RetroAudio.playSE('step');
+    if(S.ev!=null)setTimeout(()=>RetroAudio.playSE('event'),140);
+  }
+  Play();
+  if(tookMock)openMockReportModal(S.mocks.length-1);
+}
+
+/* =================================================================
+   Phase A (大学受験): 1月中旬 大学入学共通テスト（1000点満点）＆ 自己採点速報
+   ================================================================= */
+function Kt(){
+  show('exam');
+  if(!S.kt)runKyotsu(S);
+  const kt=S.kt;
+  const f=SCH[2][S.fi||0];
+  const fMeta=getUniMeta(f);
+  const borderPct=fMeta.isNat?fMeta.ktBorderPct:fMeta.kyoteBorderPct;
+  const diffPct=Math.round((kt.pct-borderPct)*10)/10;
+  const j=diffPct>=3?'A判定':diffPct>=0?'B判定':diffPct>=-3?'C判定':diffPct>=-6?'D判定':'E判定';
+  const jColor=diffPct>=3?'text-emerald-300':diffPct>=0?'text-sky-300':diffPct>=-3?'text-yellow-300':diffPct>=-6?'text-orange-400':'text-red-400';
+
+  H('exam-phase-sub').textContent='★ 1月中旬 大学入学共通テスト 自己採点速報 ★';
+  H('exam-boss-header').textContent='大学入学共通テスト（1000点満点）';
+  H('boss-battle-arena').classList.add('hidden');
+  H('exam-announcement-area').classList.add('hidden');
+  H('kyotsu-battle-box').classList.remove('hidden');
+
+  H('kyotsu-battle-box').innerHTML=`
+    <div class="rpg-window-gold p-3 text-center space-y-1.5">
+      <div class="text-[11px] text-amber-300">▼ 1000点満点 自己採点総合結果 ▼</div>
+      <div class="text-2xl sm:text-3xl font-bold text-yellow-300">${kt.total} <span class="text-sm text-white">/ 1000点</span></div>
+      <div class="text-xs text-neutral-200">得点率：<b class="text-sky-300">${kt.pct.toFixed(1)}%</b>　｜　共テ換算偏差値：<b class="text-emerald-300">${kt.ktDev.toFixed(1)}</b></div>
+    </div>
+
+    <div class="space-y-1.5">
+      <div class="text-yellow-300 font-bold">▼ 教科別 自己採点内訳（各科目の実力偏差値が反映）</div>
+      ${kt.subs.map(sub=>{
+        const w=Math.round((sub.score/sub.max)*100);
+        return`<div class="border border-neutral-700 p-2 bg-[#0c0c14]">
+          <div class="flex justify-between text-xs">
+            <span>${sub.name}</span>
+            <span><b class="text-yellow-300">${sub.score}</b> / ${sub.max}点 (${w}%)</span>
+          </div>
+          <div class="w-full h-1.5 bg-neutral-900 mt-1"><div class="h-full bg-sky-400" style="width:${w}%"></div></div>
+        </div>`;
+      }).join('')}
+    </div>
+
+    <div class="border-2 border-neutral-600 p-2.5 bg-[#0c0c14] space-y-1">
+      <div class="text-[11px] text-neutral-300">第一志望（${f[0]}）リサーチ判定</div>
+      <div class="flex justify-between items-center text-xs">
+        <span>${fMeta.isNat?'国公立共テボーダー':'共テ利用ボーダー'}：<b>${borderPct}%</b></span>
+        <span class="font-bold ${jColor}">${j}（${diffPct>=0?'+':''}${diffPct.toFixed(1)}%）</span>
+      </div>
+      ${fMeta.isNat&&kt.pct<fMeta.ashikiriPct?`<div class="text-[11px] text-red-400 font-bold">⚠ 警告：第一段階選抜（足切りライン ${fMeta.ashikiriPct}%）を下回っています！</div>`:''}
+    </div>
+
+    <div class="fixed bottom-0 left-0 right-0 z-20 px-3 pb-3 pt-2 bg-gradient-to-t from-[#08080c] via-[#08080c] to-transparent pointer-events-none">
+      <div class="max-w-[540px] mx-auto pointer-events-auto">
+        ${btn("S.ap=null;go('app')",'自己採点をもとに志望校へ出願する（最大5枠）','text-yellow-300 border-yellow-300 bg-[#111936] shadow-lg')}
+      </div>
+    </div>`;
+  save();
+}
+
+/* =================================================================
+   Phase B: 出願画面（si===2は全61大学・552学部学科から5枠出願戦略）
+   ================================================================= */
+function App(){
+  show('exam');
+  if(S.si===2)return AppUni();
+
+  const L=SCH[S.si];
+  if(!S.ap)S.ap=auto(S);
+  H('exam-phase-sub').textContent='★ 入学試験 本番 ★';
+  H('exam-boss-header').textContent=ST[S.si]+'　出願';
+  H('boss-battle-arena').classList.add('hidden');
+  H('exam-announcement-area').classList.add('hidden');
+  H('kyotsu-battle-box').classList.remove('hidden');
+
+  H('kyotsu-battle-box').innerHTML=`
+    <div class="flex items-center justify-between gap-2">
+      <span id="app-count-label" class="text-yellow-300 font-bold">▼ 出願校を選ぶ（${S.ap.length}/4校）</span>
+      <button onclick="S.ap=auto(S);renderAppList()" class="rpg-cmd text-[11px] px-2.5 py-1 min-h-[34px] text-sky-300 border-sky-300 shrink-0">▶ おすすめ自動選択</button>
+    </div>
+    <p class="text-neutral-300">平均偏差値：<b class="text-yellow-300">${S.avgMock!=null?S.avgMock.toFixed(1):'未受験'}</b> ／ 直近：<b class="text-sky-300">${S.lastMock!=null?S.lastMock.toFixed(1):'未受験'}</b></p>
+    <div id="app-selected-chips" class="flex flex-wrap gap-1.5 border border-neutral-700 p-2 bg-[#050508]"></div>
+    <input id="app-search-input" type="text" oninput="renderAppList()" placeholder="🔍 出願校を検索..." class="w-full bg-[#08080c] border border-white focus:border-yellow-300 px-3 py-2 text-xs text-white outline-none min-h-[40px]">
+    <div id="app-school-list" class="space-y-1.5 max-h-72 overflow-y-auto pr-1"></div>
+    <div class="fixed bottom-0 left-0 right-0 z-20 px-3 pb-3 pt-2 bg-gradient-to-t from-[#08080c] via-[#08080c] to-transparent pointer-events-none">
+      <div class="max-w-[540px] mx-auto pointer-events-auto">
+        ${btn('fin()','この出願校で本番にのぞむ！','text-red-400 border-red-400 bg-[#1a0508] shadow-lg')}
+      </div>
+    </div>`;
+  renderAppList();
+  save();
+}
+
+function renderAppList(){
+  const L=SCH[S.si];
+  const q=(H('app-search-input')?.value||'').trim();
+  H('app-count-label').textContent=`▼ 出願校を選ぶ（${S.ap.length}/4校）`;
+  H('app-selected-chips').innerHTML=S.ap.map(i=>`<button onclick="tg(${i})" class="inline-flex items-center gap-1 border border-yellow-300 bg-[#161202] text-yellow-300 px-2 py-1 text-[11px]">${L[i][0]} <span class="text-red-400">×</span></button>`).join('')||'<span class="text-neutral-400 text-[11px]">未選択（全入校のみ）</span>';
+  const filtered=L.slice(0,-1).map((s,i)=>({s,i})).filter(x=>okSx(S,x.s)&&(!q||x.s[0].includes(q)||sxName(x.s).includes(q)));
+  H('app-school-list').innerHTML=filtered.map(({s,i})=>{
+    const on=S.ap.includes(i);
+    const pz=Math.round(100/(1+Math.exp(-(S.a-s[1]+PZ0)/2.5)));
+    const badge=pz>=75?'text-emerald-300':pz>=45?'text-yellow-300':'text-red-400';
+    return`<button onclick="tg(${i})" class="rpg-cmd w-full p-2.5 min-h-[44px] text-left flex items-center justify-between ${on?'border-yellow-300 text-yellow-300 bg-[#141a33]':''}"><span><span class="cursor-arrow">${on?'☑':'▶'}</span> ${s[0]} ${sxTag(s)}</span><span class="text-[11px] shrink-0 ml-2">目安${s[1]} <b class="${badge}">(${pz}%)</b></span></button>`;
+  }).join('')||'<p class="text-xs text-neutral-400 py-2 text-center">該当する学校が見つかりません</p>';
+}
+
+function tg(i){const k=S.ap.indexOf(i);if(k>=0)S.ap.splice(k,1);else if(S.ap.length<4)S.ap.push(i);renderAppList();save()}
+
+let appUniFilter='all';
+function setAppUniFilter(f){appUniFilter=f;renderAppUniList();}
+
+function AppUni(){
+  if(!S.kt)runKyotsu(S);
+  if(!S.ap||!Array.isArray(S.ap)||(S.ap.length&&typeof S.ap[0]!=='object'))S.ap=autoUniApp(S);
+  H('exam-phase-sub').textContent='★ 1月下旬 出願戦略（全61大学・国公立/私立一般/共テ利用） ★';
+  H('exam-boss-header').textContent='大学受験　出願（最大5枠）';
+  H('boss-battle-arena').classList.add('hidden');
+  H('exam-announcement-area').classList.add('hidden');
+  H('kyotsu-battle-box').classList.remove('hidden');
+
+  H('kyotsu-battle-box').innerHTML=`
+    <div class="flex items-center justify-between gap-2 bg-[#120e02] border border-amber-300 p-2">
+      <div class="text-[11px]">
+        <span class="text-amber-300 font-bold">共テ：${S.kt.total}/1000点 (${S.kt.pct.toFixed(1)}%)</span>
+        <span class="ml-1 text-neutral-300">${S.bunri==='bun'?'[文系]':S.bunri==='ri'?'[理系]':''}</span><br>
+        <span class="text-neutral-300">平均 ${S.avgMock!=null?S.avgMock.toFixed(1):'―'} ／ 直近 ${S.lastMock!=null?S.lastMock.toFixed(1):'―'}</span>
+      </div>
+      <button onclick="S.ap=autoUniApp(S);renderAppUniList()" class="rpg-cmd text-[11px] px-2.5 py-1.5 min-h-[36px] text-sky-300 border-sky-300 shrink-0">▶ おすすめ出願</button>
+    </div>
+
+    <div class="flex items-center justify-between">
+      <span id="app-uni-count-label" class="text-yellow-300 font-bold">▼ 出願リスト（${S.ap.length}/5枠）</span>
+      <span class="text-[10px] text-neutral-400">国公立前期は1校まで</span>
+    </div>
+    <div id="app-uni-chips" class="flex flex-wrap gap-1.5 border border-neutral-700 p-2 bg-[#050508]"></div>
+
+    <input id="app-uni-search" type="text" oninput="renderAppUniList()" placeholder="🔍 大学名・学部名で検索（例：東大、理3、早稲田、法...）" class="w-full bg-[#08080c] border border-white focus:border-yellow-300 px-3 py-2 text-xs text-white outline-none min-h-[40px]">
+    <div id="app-uni-filters" class="flex flex-wrap gap-1"></div>
+    <div id="app-uni-list" class="space-y-2 max-h-72 overflow-y-auto pr-1"></div>
+
+    <div class="fixed bottom-0 left-0 right-0 z-20 px-3 pb-3 pt-2 bg-gradient-to-t from-[#08080c] via-[#08080c] to-transparent pointer-events-none">
+      <div class="max-w-[540px] mx-auto pointer-events-auto">
+        ${btn('startNijiPhase()','出願を確定して2月決戦へ！','text-red-400 border-red-400 bg-[#1a0508] shadow-lg')}
+      </div>
+    </div>`;
+  renderAppUniList();
+  save();
+}
+
+function toggleUniApp(idx,mode){
+  const pos=S.ap.findIndex(x=>x.idx===idx&&x.mode===mode);
+  if(pos>=0){
+    S.ap.splice(pos,1);
+  }else{
+    if(S.ap.length>=5){showToast('＊ 出願は最大5枠までです！');return;}
+    if(mode==='nat_zenki'&&S.ap.some(x=>x.mode==='nat_zenki')){
+      showToast('＊ 国公立の前期日程は1校のみ出願できます！');
+      return;
+    }
+    if(mode==='nat_koki'&&S.ap.some(x=>x.mode==='nat_koki')){
+      showToast('＊ 国公立の後期日程は1校のみ出願できます！');
+      return;
+    }
+    S.ap.push({idx,mode});
+  }
+  renderAppUniList();
+  save();
+}
+
+function modeLabel(mode){
+  return({nat_zenki:'国公立・前期',nat_koki:'国公立・後期',priv_ippan:'私立・一般',priv_kyote:'私立・共テ利用'})[mode]||mode;
+}
+
+function renderAppUniList(){
+  const L=SCH[2];
+  const ktPct=S.kt.pct;
+  const q=(H('app-uni-search')?.value||'').trim();
+  H('app-uni-count-label').textContent=`▼ 出願リスト（${S.ap.length}/5枠）`;
+  H('app-uni-chips').innerHTML=S.ap.map(x=>`<button onclick="toggleUniApp(${x.idx},'${x.mode}')" class="inline-flex items-center gap-1 border ${x.mode==='priv_kyote'?'border-amber-300 text-amber-300 bg-[#181202]':x.mode.startsWith('nat')?'border-emerald-300 text-emerald-300 bg-[#051810]':'border-sky-300 text-sky-300 bg-[#071326]'} px-2 py-1 text-[10px]">${L[x.idx][0]}[${modeLabel(x.mode).split('・')[1]}] <span class="text-red-400">×</span></button>`).join('')||'<span class="text-neutral-400 text-[11px]">未選択（全入校のみ）</span>';
+
+  const fBtns=[['all','すべて'],['文','文系'],['理','理系'],['医','医歯薬'],['難関','難関'],['国公立','国公立'],['MARCH関関同立','MARCH関関'],['中堅','中堅']];
+  H('app-uni-filters').innerHTML=fBtns.map(([k,lbl])=>`<button onclick="setAppUniFilter('${k}')" class="rpg-cmd px-2 py-1 text-[10px] ${appUniFilter===k?'border-yellow-300 text-yellow-300 bg-[#141a33]':'text-neutral-300'}">${lbl}</button>`).join('');
+
+  const filtered=L.slice(0,-1).map((s,i)=>({s,i})).filter(({s})=>{
+    if(q&&!s[0].includes(q))return false;
+    const m=s[2]||{};
+    if(appUniFilter==='all')return true;
+    if(['文','理','医'].includes(appUniFilter))return m.bunri===appUniFilter||m.bunri==='共';
+    if(appUniFilter==='国公立')return m.isNat;
+    return m.grp===appUniFilter;
+  });
+
+  H('app-uni-list').innerHTML=filtered.slice(0,80).map(({s,i})=>{
+    const meta=getUniMeta(s);
+    const mismatch=!isBunriMatch(S.bunri,meta.bunri);
+    if(meta.isNat){
+      const onZenki=S.ap.some(x=>x.idx===i&&x.mode==='nat_zenki');
+      const onKoki=S.ap.some(x=>x.idx===i&&x.mode==='nat_koki');
+      const ashikiri=ktPct<meta.ashikiriPct;
+      const diffPct=Math.round((ktPct-meta.ktBorderPct)*10)/10;
+      const bCol=ashikiri?'text-red-400':diffPct>=0?'text-emerald-300':'text-yellow-300';
+      return`<div class="border ${onZenki||onKoki?'border-emerald-300 bg-[#071812]':'border-neutral-600 bg-[#0c0c14]'} p-2.5 space-y-1.5">
+        <div class="flex justify-between items-center gap-1">
+          <span class="font-bold text-white"><span class="text-[10px] border border-emerald-400 text-emerald-300 px-1 mr-1">国公立・${meta.bunri}</span>${s[0]}</span>
+          <span class="text-[10px] text-neutral-300 shrink-0">目安${s[1]}</span>
+        </div>
+        <div class="text-[10px] text-neutral-300 flex justify-between">
+          <span>共テボーダー ${meta.ktBorderPct}%（足切り ${meta.ashikiriPct}%）${mismatch?' <b class="text-red-400">⚠文理不一致</b>':''}</span>
+          <span class="font-bold ${bCol}">${ashikiri?'⚠足切り危険':(diffPct>=0?'+':'')+diffPct.toFixed(1)+'%'}</span>
+        </div>
+        <div class="grid ${meta.hasKoki?'grid-cols-2':'grid-cols-1'} gap-1.5 pt-0.5">
+          <button onclick="toggleUniApp(${i},'nat_zenki')" class="rpg-cmd py-2 px-2 min-h-[38px] text-[11px] font-bold ${onZenki?'border-yellow-300 text-yellow-300 bg-[#141a33]':'text-emerald-300 border-emerald-400'}">
+            ${onZenki?'☑ 前期 出願中':'▶ 前期日程に出願'}
+          </button>
+          ${meta.hasKoki?`<button onclick="toggleUniApp(${i},'nat_koki')" class="rpg-cmd py-2 px-2 min-h-[38px] text-[11px] font-bold ${onKoki?'border-yellow-300 text-yellow-300 bg-[#141a33]':'text-teal-300 border-teal-400'}">
+            ${onKoki?'☑ 後期 出願中':'▶ 後期日程に出願'}
+          </button>`:''}
+        </div>
+      </div>`;
+    }else{
+      const onIppan=S.ap.some(x=>x.idx===i&&x.mode==='priv_ippan');
+      const onKyote=S.ap.some(x=>x.idx===i&&x.mode==='priv_kyote');
+      const pzIppan=Math.round(100/(1+Math.exp(-(S.a-(mismatch?5.5:0)-s[1])/2.4)));
+      const diffKyote=Math.round((ktPct-meta.kyoteBorderPct)*10)/10;
+      const pzKyote=Math.round(100/(1+Math.exp(-diffKyote/1.35)));
+      return`<div class="border ${onIppan||onKyote?'border-yellow-300 bg-[#121629]':'border-neutral-600 bg-[#0c0c14]'} p-2.5 space-y-1.5">
+        <div class="flex justify-between items-center gap-1">
+          <span class="font-bold text-white"><span class="text-[10px] border border-sky-400 text-sky-300 px-1 mr-1">私立・${meta.bunri}</span>${s[0]}</span>
+          <span class="text-[10px] text-neutral-300 shrink-0">目安${s[1]} ${mismatch?'<b class="text-red-400">⚠不一致</b>':''}</span>
+        </div>
+        <div class="grid grid-cols-2 gap-1.5 pt-0.5">
+          <button onclick="toggleUniApp(${i},'priv_ippan')" class="rpg-cmd py-2 px-2 min-h-[40px] text-left text-[10px] ${onIppan?'border-yellow-300 text-yellow-300 bg-[#1a2240]':'text-sky-200 border-sky-400'}">
+            <div class="font-bold">${onIppan?'☑ 一般入試':'▶ 一般入試'}</div>
+            <div class="text-neutral-300">二次勝負 (${pzIppan}%)</div>
+          </button>
+          <button onclick="toggleUniApp(${i},'priv_kyote')" class="rpg-cmd py-2 px-2 min-h-[40px] text-left text-[10px] ${onKyote?'border-yellow-300 text-yellow-300 bg-[#241c04]':'text-amber-200 border-amber-400'}">
+            <div class="font-bold">${onKyote?'☑ 共テ利用':'▶ 共テ利用'}</div>
+            <div class="text-neutral-300">ボーダー${meta.kyoteBorderPct}% (${pzKyote}%)</div>
+          </button>
+        </div>
+      </div>`;
+    }
+  }).join('')+(filtered.length>80?`<p class="text-[10px] text-neutral-400 text-center py-1">ほか ${filtered.length-80}件（検索ワードで絞り込めます）</p>`:'')||'<p class="text-xs text-neutral-400 py-2 text-center">該当する大学・学部が見つかりません</p>';
+}
+
+/* =================================================================
+   Phase C (大学受験): 2月 共テ利用速報 ＆ 二次試験（個別学力試験）本番
+   ================================================================= */
+
+/* ===== 科学・言語オリンピック等（目安の対象学年・時期） ===== */
+const OLY=[
+['sansu','算数オリンピック',[0],['math'],[4],'小学生'],
+['jjmo','数学ジュニアオリンピック（予選）',[1],['math'],[9],'中学生以下'],
+['jmo','日本数学オリンピック（予選）',[2],['math'],[9],'高校生以下'],
+['chem','化学グランプリ',[1,2],['sci'],[3],'高3相当以下（中学生可）'],
+['phys','物理チャレンジ',[1,2],['sci','math'],[3],'中学生・高校生'],
+['bio','生物学オリンピック',[2],['sci'],[3],'高校生以下'],
+['info','情報オリンピック',[1,2],['math','info'],[8],'中高生'],
+['earth','地学オリンピック',[2],['sci'],[8],'高校生以下'],
+['ling','言語学オリンピック',[1,2],['eng','jpn'],[7],'高校生以下'],
+['geo','科学地理オリンピック',[2],['soc'],[8],'高校生']
+];
+function olyList(S){const m=S.t%12,y=Math.floor(S.t/12);S.oly=S.oly||{};return OLY.filter(o=>o[2].includes(S.si)&&o[4].includes(m)&&y<=2).map(o=>({o,k:o[0]+'_'+S.si+'_'+y}))}
+function olyHtml(S){const l=olyList(S);if(!l.length)return'';return`<div class="border border-sky-400/60 bg-[#08121c] p-2 space-y-1"><div class="text-[11px] font-bold text-sky-300">▼ 今月のコンテスト（任意・体力-6）</div>${l.map(({o,k})=>{const r=S.oly[k];return`<button onclick="olyEnter('${o[0]}')" ${r?'disabled':''} class="rpg-cmd w-full p-1.5 min-h-[38px] text-left text-[11px]"><span class="cursor-arrow">▶</span> ${o[1]} <span class="text-[10px] text-neutral-400">（${o[5]}）</span>${r?`<b class="text-yellow-300 float-right">${r}</b>`:''}</button>`}).join('')}</div>`}
+function olyEnter(id){const o=OLY.find(x=>x[0]===id),k=id+'_'+S.si+'_'+Math.floor(S.t/12);S.oly=S.oly||{};if(!o||S.oly[k])return;
+ const cur=getCurriculum(S),v=o[3].map(key=>{const i=cur.findIndex(c=>c.key===key);return i>=0?S.subA[i]:S.a}),base=v.reduce((a,b)=>a+b,0)/v.length;
+ const sc=base+(RR(S.seed,S.t+1000*S.si,90+OLY.indexOf(o))-.5)*16;
+ const g=sc>=88?['金賞',12,12,5,.6]:sc>=78?['銀賞',8,8,3,.4]:sc>=68?['銅賞',5,5,2,.25]:sc>=58?['優秀賞',2,3,1,.1]:['参加',0,1,1,0];
+ S.h=cl(S.h-6);S.m=cl(S.m-3+g[1]);S.c=cl(S.c+g[2]);S.y=cl(S.y+g[3]);
+ cur.forEach((c,i)=>{if(o[3].includes(c.key))S.subA[i]=Math.min(AMAX(S),S.subA[i]+g[4])});syncOverallFromSubs(S);
+ S.oly[k]=g[0];S.log.push(`【コンテスト】${o[1]}で「${g[0]}」！`);save();Play();showToast(`＊ ${o[1]}：${g[0]}`)}
+
+function startNijiPhase(){
+  S.kyoteChecked=false;
+  S.nijiStrat=1;
+  go('niji');
+}
+
+function Niji(){
+  show('exam');
+  if(!S.kyoteChecked)evalKyoteEarly(S);
+  const L=SCH[2];
+  const nijiApps=(S.ap||[]).filter(x=>x.mode!=='priv_kyote');
+  const kyotePassed=(S.kyoteResults||[]).filter(x=>x.ok);
+
+  H('exam-phase-sub').textContent='★ 2月 共テ利用速報 ＆ 二次試験（個別学力試験） ★';
+  H('exam-boss-header').textContent='2月決戦：共テ利用速報 ＆ 二次試験';
+  H('kyotsu-battle-box').classList.add('hidden');
+  H('exam-announcement-area').classList.add('hidden');
+  H('boss-battle-arena').classList.remove('hidden');
+
+  const strats=[
+    ['堅実・安全策（基礎完答重視）','ケアレスミスを徹底防止。実力相応校を確実に仕留める安定型。'],
+    ['標準・実力通り（バランス配分）','普段通りの時間配分で自分の実力をそのまま発揮する。'],
+    ['勝負の攻め（難問完答チャレンジ）','格上校逆転を狙い難問に踏み込む！大当たりすれば爆発力＋、失敗リスクあり。']
+  ];
+
+  H('boss-battle-arena').innerHTML=`
+    <div class="rpg-window p-3 text-xs space-y-2">
+      <div class="text-amber-300 font-bold">▼ 2月上旬 共通テスト利用入試 合格速報</div>
+      ${(S.kyoteResults||[]).length?S.kyoteResults.map(r=>`
+        <div class="border ${r.ok?'border-yellow-300 bg-[#181302]':'border-neutral-700'} p-2 flex justify-between items-center">
+          <div>
+            <div class="font-bold text-white">${r.name}【共テ利用】</div>
+            <div class="text-[10px] text-neutral-300">得点 ${r.myScore}点 ／ ボーダー ${r.borderScore}点</div>
+          </div>
+          <b class="${r.ok?'text-yellow-300':'text-red-400'}">${r.ok?'🌸 合格！':'💀 不合格'}</b>
+        </div>`).join(''):'<p class="text-neutral-400">共通テスト利用入試の出願はありません。</p>'}
+      ${kyotePassed.length?'<div class="text-emerald-300 text-[11px] font-bold">＊ 共テ利用合格で安心感を獲得！（やる気+8・自信+10）</div>':''}
+    </div>
+
+    ${nijiApps.length?`
+    <div class="rpg-window p-3 text-xs space-y-2">
+      <div class="text-sky-300 font-bold">▼ 2月 二次試験・私立一般 受験校一覧（${nijiApps.length}校）</div>
+      <div class="space-y-1">
+        ${nijiApps.map(x=>`<div class="border border-neutral-700 px-2.5 py-1.5 flex justify-between gap-2"><span class="truncate">${L[x.idx][0]}</span><span class="text-neutral-300 shrink-0">${modeLabel(x.mode)}</span></div>`).join('')}
+      </div>
+    </div>
+
+    <div class="rpg-window-gold p-3 text-xs space-y-2">
+      <div class="text-yellow-300 font-bold">▼ 二次試験（個別学力試験）の作戦を選ぶ</div>
+      <div class="space-y-1.5">
+        ${strats.map((st,idx)=>`<button onclick="S.nijiStrat=${idx};Niji()" class="rpg-cmd w-full p-2.5 min-h-[46px] text-left ${S.nijiStrat===idx?'border-yellow-300 text-yellow-300 bg-[#141a33]':''}">
+          <div class="font-bold"><span class="cursor-arrow">▶</span> ${st[0]}</div>
+          <div class="text-[10px] text-neutral-300 pl-3.5 mt-0.5">${st[1]}</div>
+        </button>`).join('')}
+      </div>
+    </div>`:`<div class="rpg-window p-3 text-xs text-neutral-300">2月の個別学力試験（二次試験）の出願はありません。</div>`}
+
+    <div class="fixed bottom-0 left-0 right-0 z-20 px-3 pb-3 pt-2 bg-gradient-to-t from-[#08080c] via-[#08080c] to-transparent pointer-events-none">
+      <div class="max-w-[540px] mx-auto pointer-events-auto">
+        ${btn('finUni()',nijiApps.length?'二次試験を受験し、最終合格発表へ！':'最終合格発表（進路確定）へ進む','text-red-400 border-red-400 bg-[#1a0508] shadow-lg')}
+      </div>
+    </div>`;
+  save();
+}
+
+function finUni(){
+  const x=examUniFull(S);
+  S.rv=x.rv;
+  S.bn=x.bn;
+  S.xr=x.res;
+  S.an=analyze(S);
+  rec();
+  go('ann');
+}
+
+function fin(){const x=exam(S,S.ap);S.rv=x.rv;S.bn=x.bn;S.xr=x.res;S.an=analyze(S);rec();go('ann')}
+
+function Ann(){
+  show('exam');
+  const L=SCH[S.si];
+  H('exam-phase-sub').textContent='★ 最終合格発表 ★';
+  H('exam-boss-header').textContent=ST[S.si]+'　合格発表';
+  ['kyotsu-battle-box','boss-battle-arena'].forEach(i=>H(i).classList.add('hidden'));
+  H('exam-announcement-area').classList.remove('hidden');
+  if(typeof RetroAudio!=='undefined'){
+    const anyPass=S.si===2?(S.xr||[]).some(x=>x.ok):(S.bn!=L.length-1);
+    RetroAudio.playSE(anyPass?'pass':'fail');
+  }
+
+  if(S.si===2){
+    H('exam-results-cards').innerHTML=(S.xr.length?S.xr.map(x=>`
+      <div class="${x.ok?'rpg-window-gold':'rpg-window'} p-2.5 flex justify-between items-center gap-2 text-xs">
+        <div class="min-w-0">
+          <div class="font-bold text-white truncate">${L[x.idx][0]} <span class="text-[10px] text-amber-300">[${modeLabel(x.mode)}]</span></div>
+          <div class="text-[10px] text-neutral-300 truncate">${x.detail}</div>
+        </div>
+        <b class="${x.ok?'text-yellow-300':'text-red-400'} shrink-0">${x.ok?'🌸 合格！':'💀 不合格'}</b>
+      </div>`).join(''):'<div class="rpg-window p-2.5 text-xs text-neutral-400">一般・共テ利用の出願なし</div>')+
+      `<div class="rpg-window-gold p-3 text-xs">最終進学先：<b class="text-yellow-300 text-sm">${L[S.bn][0]}</b></div>`;
+  }else{
+    H('exam-results-cards').innerHTML=S.xr.map(x=>`<div class="${x[2]?'rpg-window-gold':'rpg-window'} p-3 flex justify-between items-center text-xs"><span>${L[x[0]][0]}</span><b class="${x[2]?'text-yellow-300':'text-red-400'}">${x[2]?'🌸 合格！':'💀 不合格'}</b></div>`).join('')+`<div class="rpg-window p-3 text-xs">進学先：<b class="text-yellow-300 text-sm">${L[S.bn][0]}</b></div>`;
+  }
+  H('choice-buttons-container').innerHTML=(S.si==2&&S.len==34&&S.rv<L[S.fi][1]?btn('ro()','もう1年がんばる（浪人する）','text-red-400 border-red-400'):'')+btn("go('res')",'結果の分析を見る','text-yellow-300 border-yellow-300');
+}
+
+function ro(){
+  S.len=46;
+  S.ap=null;
+  S.kt=null;
+  S.kyoteResults=null;
+  S.kyoteChecked=false;
+  S.h=cl(S.h+20);
+  S.m=cl(S.m+10);
+  rollEv(S);
+  go('play');
+}
+
+function Res(){
+  show('result');
+  const L=SCH[S.si],a=S.an,ok=S.bn!=L.length-1,last=S.k+1>=S.stages.length;
+  const avgStr=S.avgMock!=null?`総合 ${S.avgMock.toFixed(1)} / 直近 ${S.lastMock!=null?S.lastMock.toFixed(1):S.avgMock.toFixed(1)}`:`実力 ${S.a.toFixed(1)}`;
+  H('result-clear-badge').textContent=ok?'★ 合格クリア！ ★':'★ 全入の進路へ ★';
+  H('result-player-label').textContent=`受験生『${S.name}』の${ST[S.si]}戦歴`;
+  H('result-summary-headline').textContent=`${avgStr} → ${L[S.bn][0]}`;
+  H('result-sub-detail').textContent=`スコア ${a.sc.toLocaleString()} ／ 勉強 ${Math.round(S.hrs)}時間`+(S.si===2&&S.kt?` ／ 共テ ${S.kt.total}/1000点`:'');
+  H('result-earned-titles').innerHTML=(S.nt&&S.nt.length?S.nt.map(t=>`<span class="border border-yellow-300 text-yellow-300 px-2 py-0.5 text-[11px]">${t}</span>`).join(''):'<span class="text-[11px] text-neutral-400">（今回はなし）</span>');
+  H('result-epilogue-text').innerHTML=['生まれ','運','選択','努力','結果'].map((n,i)=>`${n}：上位 ${a.p[i]}%`).join('<br>')+`<br><span class="text-neutral-300">運だけがちがう4人の自分：${a.sv.map(i=>L[i][0]).join(' / ')}</span><br><span class="text-neutral-400">スコアはふつう約10,000です</span>`+(S.sk?`<br><span class="text-yellow-300">【秘密の特性】${S.bg}：得意 ${SUBN[S.sk.s]}／苦手 ${SUBN[S.sk.w]||'なし'}</span>`:'');
+  const nb=H('result-next-box');
+  if(nb){
+    if(!last&&S.si===0){
+      nb.innerHTML=`<div class="rpg-window p-2.5 space-y-2 text-left">
+        <div class="text-xs font-bold text-yellow-300">▼ このあと高校受験する？（途中から変更も可）</div>
+        <button onclick="nx2(true)" class="rpg-cmd w-full py-3 px-3 min-h-[48px] text-sm font-bold text-sky-300 border-sky-300 bg-[#0b162c]">
+          <span class="cursor-arrow always-blink">▶</span> 高校受験する（外部の高校を受験）
+        </button>
+        <button onclick="nx2(false)" class="rpg-cmd w-full py-3 px-3 min-h-[48px] text-sm font-bold text-emerald-300 border-emerald-300 bg-[#071a12]">
+          <span class="cursor-arrow">▶</span> 高校受験しない（${ok?L[S.bn][0]+'から内部進学':'受験せず進む'}）
+        </button>
+      </div>`;
+    }else{
+      nb.innerHTML=`<button onclick="nx2()" class="rpg-cmd w-full py-3.5 px-3 min-h-[50px] text-sm font-bold text-sky-300 border-sky-300 bg-[#0b162c]"><span class="cursor-arrow always-blink">▶</span> <span id="next-label">${last?'タイトルへ戻る':'つぎの受験へ'}</span></button>`;
+    }
+  }
+  {const b=H('result-clear-badge');b.innerHTML='<span class="tw">✦</span> '+b.textContent+' <span class="tw">✦</span>'}
+}
+
+function copyResultText(){
+  if(!S)return;
+  const L=SCH[S.si],a=S.an;
+  const avgStr=S.avgMock!=null?`平均偏差値${S.avgMock.toFixed(1)}(直近${(S.lastMock??S.avgMock).toFixed(1)})`:`偏差値${S.a.toFixed(1)}`;
+  const ktStr=S.si===2&&S.kt?`｜共テ${S.kt.total}/1000点`:'';
+  const txt=`【受験ガチャ】${S.name}（${ST[S.si]}）｜${avgStr}${ktStr} → ${L[S.bn][0]}｜スコア ${a.sc.toLocaleString()}（上位${a.p[4]}%）`;
+  const ta=document.createElement('textarea');
+  ta.value=txt;
+  document.body.appendChild(ta);
+  ta.select();
+  try{
+    document.execCommand('copy');
+    showToast('＊ 戦歴テキストをコピーしました！');
+  }catch(e){
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(txt).then(()=>showToast('＊ 戦歴テキストをコピーしました！')).catch(()=>showToast('＊ コピーしました！'));
+    }
+  }
+  document.body.removeChild(ta);
+}
+
+function renderMocksModal(){
+  if(!S)return;
+  const mocks=S.mocks||[];
+  const spec=getMockSpec(S);
+  const jumpPen=calcJumpPenalty(S,spec);
+  H('modal-mocks-summary').textContent=mocks.length?`平均偏差値：${S.avgMock.toFixed(1)} ／ 直近模試：${(S.lastMock??mocks[mocks.length-1].score).toFixed(1)}（全${mocks.length}回）`:`まだ模試を受験していません（次回：${nextMockLabel(S)}）`;
+  if(!mocks.length){
+    H('modal-mocks-body').innerHTML=`<div class="border border-neutral-600 p-3 text-neutral-300 space-y-1.5"><p>模試は <b>4月・6月・9月・11月・1月</b> に実施されます。</p><p class="text-amber-300">現在の設定：${jumpPen>0?`【飛び級-${jumpPen}】`:''}${spec.name}（${spec.tag}）</p></div>`;
+    return;
+  }
+  H('modal-mocks-body').innerHTML=mocks.map((m,idx)=>{
+    const subAvg=(mocks.slice(0,idx+1).reduce((a,b)=>a+b.score,0)/(idx+1)).toFixed(1);
+    const barW=Math.max(8,Math.min(100,(m.score-25)*1.7));
+    const subLine=(m.subs||[]).map(x=>`${x.short}${x.dev.toFixed(0)}`).join(' ');
+    return`<button onclick="closeModal('modal-mocks');openMockReportModal(${idx})" class="rpg-cmd w-full p-2.5 text-left space-y-1">
+      <div class="flex justify-between text-[11px]"><span class="text-neutral-300">${m.lab}｜${m.judgment||''}判定</span><span class="text-amber-300">${m.jumpPen>0?`飛び級-${m.jumpPen}・`:''}${m.tag}</span></div>
+      <div class="font-bold text-white flex justify-between"><span><span class="cursor-arrow">▶</span> ${m.name}</span><span class="text-[10px] text-amber-200">成績票を見る</span></div>
+      <div class="flex items-center justify-between text-xs">
+        <span>総合：<b class="text-sky-300">${m.score.toFixed(1)}</b></span>
+        <span>累積平均：<b class="text-yellow-300">${subAvg}</b></span>
+      </div>
+      ${subLine?`<div class="text-[10px] text-neutral-300 truncate">${subLine}</div>`:''}
+      <div class="w-full h-1.5 bg-neutral-900"><div class="h-full bg-yellow-300" style="width:${barW}%"></div></div>
+    </button>`;
+  }).reverse().join('');
+}
+
+function renderTargetModal(){
+  if(!S)return;
+  const L=SCH[S.si],list=MOCK_LIST[S.si],g=curGrade(S);
+  const gNames=STAGE_GRADE_NAMES[S.si];
+  H('modal-target-body').innerHTML=`
+    ${S.si===1?`<div class="border border-yellow-300/60 bg-[#120e02] p-2.5 flex items-center justify-between gap-2">
+      <div class="min-w-0">
+        <div class="text-yellow-300 font-bold">▼ 高校受験の選択（いつでも変更可）</div>
+        <div class="text-[10px] text-neutral-300 mt-0.5 truncate">現在：${S.ex===false?(S.jhSchool?S.jhSchool+'から内部進学（受験しない）':'高校受験しない'):'高校受験する'}</div>
+      </div>
+      <button onclick="toggleHighSchoolExam(${S.ex===false?'true':'false'})" class="rpg-cmd px-2.5 py-1.5 min-h-[38px] text-xs font-bold shrink-0 ${S.ex===false?'text-yellow-300 border-yellow-300':'text-red-400 border-red-400'}">
+        ▶ ${S.ex===false?'やっぱりやる':'やっぱり辞める'}
+      </button>
+    </div>`:''}
+    <div class="space-y-1.5">
+      <div class="text-amber-300 font-bold">▼ 受ける模試の設定（現在：${gNames[g]}｜飛び級受験も選択可）</div>
+      <p class="text-[10px] text-neutral-300">上の学年の模試を受けると偏差値は-13〜-20（冠模試は-25〜-30、最低25.0）と厳しく出ます。</p>
+      <button onclick="setMockSetting('auto',0,true)" class="rpg-cmd w-full p-2.5 min-h-[44px] text-left ${S.mockMode!=='manual'?'border-yellow-300 text-yellow-300 bg-[#141a33]':''}">
+        <span class="cursor-arrow">▶</span> 学年・志望校連動オート（現在：${list[autoMockIdx(S.si,S.fi||0,g)].name}）
+      </button>
+      <div class="space-y-1.5 pt-1">
+        ${list.map((m,idx)=>{
+          if(m.grade<g)return'';
+          const active=S.mockMode==='manual'&&S.mockIdx===idx;
+          const pen=calcJumpPenalty(S,m);
+          return`<button onclick="setMockSetting('manual',${idx},true)" class="rpg-cmd w-full p-2.5 min-h-[46px] text-left ${active?'border-yellow-300 text-yellow-300 bg-[#141a33]':''}">
+            <div class="flex justify-between font-bold gap-1">
+              <span><span class="cursor-arrow">▶</span> ${m.name}</span>
+              <span class="text-[10px] ${pen>0?'text-red-400':'text-amber-300'} shrink-0">${pen>0?`飛び級-${pen}`:m.tag}</span>
+            </div>
+            <div class="text-[10px] text-neutral-300 pl-3.5 mt-0.5">${m.desc}</div><div class="text-[10px] text-sky-300 pl-3.5">第一志望（${L[S.fi][0]}）の目安 ${examT(m,L[S.fi])}（合格可能性80%）</div>
+          </button>`;
+        }).join('')}
+      </div>
+    </div>
+    <div class="border-t border-neutral-700 pt-2.5 space-y-1.5">
+      <div class="text-sky-300 font-bold">▼ 第一志望校の変更（現在：${L[S.fi][0]}／目安 ${L[S.fi][1]}）</div>
+      <input id="modal-target-search" type="text" oninput="renderTargetModalList()" placeholder="🔍 大学名・学部名・学校名で検索..." class="w-full bg-[#08080c] border border-white focus:border-yellow-300 px-2.5 py-1.5 text-xs text-white outline-none min-h-[38px]">
+      <div id="modal-target-list" class="space-y-1.5 max-h-48 overflow-y-auto pr-1"></div>
+    </div>`;
+  renderTargetModalList();
+}
+
+function renderTargetModalList(){
+  const L=SCH[S.si];
+  const q=(H('modal-target-search')?.value||'').trim();
+  const filtered=L.slice(0,-1).map((s,i)=>({s,i})).filter(x=>okSx(S,x.s)&&(!q||x.s[0].includes(q)||sxName(x.s).includes(q)));
+  H('modal-target-list').innerHTML=filtered.slice(0,80).map(({s,i})=>`<button onclick="selectTargetSchool(${i},true)" class="rpg-cmd w-full p-2 min-h-[42px] text-left flex justify-between items-center ${S.fi===i?'border-yellow-300 text-yellow-300 bg-[#141a33]':''}"><span><span class="cursor-arrow">▶</span> ${s[0]} ${sxTag(s)}</span><span class="text-[11px] text-neutral-300 shrink-0 ml-2">目安 ${s[1]}</span></button>`).join('')||'<p class="text-xs text-neutral-400 py-2 text-center">該当なし</p>';
+}
+
+function renderTitles(){const r=ld('jg_r')||{tt:{}};H('modal-titles-list').innerHTML=TT.map(t=>{const n=r.tt[t[0]];return`<div class="border border-neutral-600 p-2.5">${n?`<b style="color:${CC[RA.indexOf(t[1])]}">${t[1]}</b>　${t[0]} ×${n}`:'<span class="text-neutral-400">？？？</span>'}</div>`}).join('')}
+function executeClearRecords(){const r=ld('jg_r')||{tt:{}};r.pl=[];r.n=0;sv('jg_r',r);closeModal('modal-reset');Home()}
+
+H('guide-body').innerHTML=`<p><span class="text-yellow-300">【１】生まれガチャ</span><br>家庭環境・地元・才能の3つで生まれが決まります。とくに<b>「才能（地頭）」</b>は初期偏差値+13.5＆成長1.75倍と偏差値に最も強く影響します！</p><p><span class="text-yellow-300">【２】1週間1時間単位の科目別勉強配分</span><br>1週間の勉強時間を各科目に1時間単位で自由に割り振れます。多く割り振った科目ほど伸びやすく、<b>0時間の科目は演習不足で偏差値が下がります</b>。合計勉強時間が多すぎると体調・やる気が消耗します。</p><p><span class="text-yellow-300">【３】中学受験 → 高校受験</span><br>小4から中学受験に挑み、合格後も高校受験する・しないを選択できます（途中から「やっぱり辞める・やる」の変更も可能）。出来事は学年ごとに変わります。</p><p><span class="text-yellow-300">【サウンド設定】</span><br>画面上部の<b>「♪ON / ♪OFF」</b>でいつでも一発ミュート切替、<b>「音」</b>ボタンからBGM・効果音の個別ON/OFFや音量調整、BGM試聴ができます。<br><br><span class="text-yellow-300">【４】模試 個人成績返却票 ＆ 飛び級模試</span><br>模試は4月・6月・9月・11月・1月に実施され、受験した月には<b>各教科偏差値・合計偏差値・A〜E判定・全国順位・志望校内順位</b>が記載された個人成績返却票が届きます。</p>`;
+
+const X=()=>ld('jg_x');
+function dflt(){S.fi=auto(S)[0]||0}
+function setB(x,r){S.b[x]=r;Object.assign(S,st0(S.b,S.si));init();dflt();go('setup')}
+function setJ(i){S.juku=i;S.jb=JUKU[S.si][i][1]/150;save();Setup()}
+function rollG(){if(typeof RetroAudio!=='undefined')RetroAudio.playSE('gacha');S.b={f:roll(Math.random(),'f'),t:roll(Math.random(),'t'),k:roll(Math.random(),'k')};Object.assign(S,st0(S.b,S.si));init();dflt();go('setup')}
+function resetCode(){try{localStorage.removeItem('jg_x')}catch(e){}S.b={};S.juku=null;showToast('＊ 秘密コードをリセットしました');go('setup')}
+function chkCode(){if(H('secret-code').value.trim()=='923710'){sv('jg_x',1);go('setup')}else H('code-msg').textContent='コードがちがいます'}
+function toggleHighSchoolExam(wantExam){
+  if(!S||S.si!==1)return;
+  S.ex=!!wantExam;
+  if(S.ex){
+    if(S.fi==null||S.fi>=SCH[1].length-1||!okSx(S,SCH[1][S.fi]))dflt();
+    if(S.juku==null){S.juku=0;S.jb=JUKU[1][0][1]/150;}
+    S.log.push(`【進路変更】やっぱり高校受験をやることにした！（第一志望：${SCH[1][S.fi][0]}）`);
+    showToast('＊ やっぱり高校受験をやることにした！');
+  }else{
+    S.log.push(`【進路変更】やっぱり高校受験を辞めることにした！${S.jhSchool?'（'+S.jhSchool+'から内部進学）':''}`);
+    showToast('＊ やっぱり高校受験を辞めることにした！');
+  }
+  save();
+  if(!H('modal-target').classList.contains('hidden'))renderTargetModal();
+  go('play');
+}
+
+function nx2(doExam){const k=S.k+1,pr=S.si,pass=S.bn!=SCH[pr].length-1;
+ if(k>=S.stages.length){try{localStorage.removeItem('jg_s')}catch(e){}return Home()}
+ if(pr===0)S.jhSchool=pass?SCH[0][S.bn][0]:null;
+ S.ex=typeof doExam==='boolean'?doExam:!(pr==0&&pass);S.p=S.rv>40?S.rv:Math.max(44,bd(S.b)-2);S.k=k;S.si=S.stages[k];init();dflt();
+ if(!S.ex){S.juku=null;S.jb=0;S.log.push(`【進路】${S.jhSchool?S.jhSchool+'に進学し、':''}高校受験はしない選択をした。（途中から「やっぱりやる」に変更可）`);go('play')}
+ else{S.log.push(`【進路】${S.jhSchool?S.jhSchool+'に進学したうえで、':''}高校受験に挑戦する！（途中から「やっぱり辞める」に変更可）`);go('setup')}}
+
+let setupUniFilter='all';
+function setSetupUniFilter(f){setupUniFilter=f;renderSetupMockAndList();}
+
+function setSx(v){if(!S||S.k>0)return;S.sx=v;applySex(v);dflt();save();Setup()}
+function Setup(){
+ show('setup');
+ applySex(S.sx||'m');if(!okSx(S,SCH[S.si][S.fi||0]))dflt();
+ ['m','f'].forEach(v=>{const e=H('sx-'+v);e.className='rpg-cmd p-2 min-h-[44px] text-sm '+((S.sx||'m')===v?'border-yellow-300 text-yellow-300 bg-[#141a33]':'');e.disabled=S.k>0||!!S.isDiag});
+ const K=['f','t','k'],N=['家庭環境','地元','才能'],T=[FAM,TWN,TAL],L=SCH[S.si],cx=X()&&S.k==0;
+ if(cx&&S.b.f==null){S.b={f:2,t:2,k:2};Object.assign(S,st0(S.b,S.si));init();dflt()}
+ const ok=S.b.f!=null;
+ H('setup-mode-title').textContent='▼ '+ST[S.si]+'の準備';
+ H('input-player-name').value=S.name||'ロト';
+ H('setup-roll-header').textContent='▶ 生まれガチャ';
+ H('reroll-badge').textContent=cx?'秘密コード：自由選択':S.k>0?'生まれは引き継ぎ':'引き直し：残り'+S.rr+'回';
+ let c;
+ if(S.isDiag)c=`<div class="border border-amber-300/60 bg-[#141002] p-2 text-left text-xs space-y-1"><div class="text-amber-300 font-bold">★ 診断タイプ：${S.bg||''}</div><div class="text-[11px] text-neutral-200">得意：<b>${S.sk?SUBN[S.sk.s]:'―'}</b>（1.3倍） ／ 苦手：<b>${S.sk&&S.sk.w?SUBN[S.sk.w]:'なし'}</b>${S.sk&&S.sk.w?'（0.8倍）':''}</div></div>`+K.map((x,i)=>{const r=S.b[x];return`<div class="border-2 p-2.5 text-left text-xs" style="border-color:${CC[r]}"><span class="text-[10px] text-neutral-300">${N[i]}</span><br><b style="color:${CC[r]}">${RA[r]}</b>　${T[i][r][0]}</div>`}).join('')+(S.k==0?btn('startDiag()','もう一度診断し直す','text-amber-300 border-amber-300'):'');
+ else if(cx)c=K.map((x,i)=>`<div class="text-left text-xs"><span class="text-[10px] text-neutral-300">${N[i]}</span><div class="grid grid-cols-2 gap-1.5 mt-1">${T[i].map((v,r)=>`<button onclick="setB('${x}',${r})" class="rpg-cmd p-2 min-h-[42px] text-left text-[11px] ${S.b[x]==r?'border-yellow-300 text-yellow-300':''}"><b style="color:${CC[r]}">${RA[r]}</b> ${v[0]}</button>`).join('')}</div></div>`).join('');
+ else c=ok?K.map((x,i)=>{const r=S.b[x];return`<div class="border-2 p-2.5 text-left text-xs" style="border-color:${CC[r]}"><span class="text-[10px] text-neutral-300">${N[i]}</span><br><b style="color:${CC[r]}">${RA[r]}</b>　${T[i][r][0]}</div>`}).join('')+(S.k==0&&S.rr>0?btn('rerollG()','引き直す','text-white'):''):btn('rollG()','運命の生まれガチャを回す（SSR 1%）','text-yellow-300 border-yellow-300 bg-[#111936]');
+ if(ok){if(S.juku==null){S.juku=0;S.jb=JUKU[S.si][0][1]/150}c+=`<div class="border-t border-neutral-700 pt-2.5 text-left"><span class="text-[10px] text-neutral-300">塾・予備校を選ぶ（任意）</span><div class="grid grid-cols-2 gap-1.5 mt-1">${JUKU[S.si].map((j,i)=>`<button onclick="setJ(${i})" class="rpg-cmd p-2 min-h-[42px] text-left text-[11px] ${S.juku==i?'border-yellow-300 text-yellow-300 bg-[#141a33]':''}">${j[0]}</button>`).join('')}</div></div>`}
+ if(X()&&S.k==0)c+=`<div class="border-t border-neutral-700 pt-2.5">${btn('resetCode()','秘密コードをリセット','text-red-400 border-red-400')}</div>`;
+ if(!X()&&S.k==0)c+=`<div class="border-t border-neutral-700 pt-2.5 text-left flex items-center gap-1.5"><input id="secret-code" type="password" inputmode="numeric" placeholder="秘密コード" class="bg-[#08080c] border border-white px-2.5 py-1.5 text-xs text-white outline-none w-32 min-h-[38px]"> <button onclick="chkCode()" class="rpg-cmd text-xs px-3 py-1.5 min-h-[38px]">▶ 入力</button> <span id="code-msg" class="text-[10px] text-red-400"></span></div>`;
+ H('gacha-result-card').innerHTML=c;
+
+ H('setup-uni-count-badge').textContent=S.si===2?'全61大学・'+(L.length-1)+'学部':'全'+(L.length-1)+'校';
+ H('setup-search-wrap').classList.toggle('hidden',!ok);
+ H('setup-mock-config-box').classList.toggle('hidden',!ok);
+
+ if(ok){
+   renderSetupMockAndList();
+ }else{
+   H('uni-selection-list').innerHTML='';
+ }
+ H('btn-begin-adventure').disabled=!ok;
+ const quitWrap=H('setup-quit-hs-wrap');
+ if(S.si===1){
+   const qHtml=`<div id="setup-quit-hs-wrap" class="pt-1.5"><button onclick="toggleHighSchoolExam(false)" class="rpg-cmd w-full py-2.5 px-3 min-h-[42px] text-xs font-bold text-red-400 border-red-400"><span class="cursor-arrow">▶</span> やっぱり高校受験を辞める（${S.jhSchool?S.jhSchool+'から内部進学':'受験せず進む'}）</button></div>`;
+   if(quitWrap)quitWrap.outerHTML=qHtml;
+   else H('btn-begin-adventure').insertAdjacentHTML('afterend',qHtml);
+ }else if(quitWrap){
+   quitWrap.remove();
+ }
+}
+
+function renderSetupMockAndList(){
+  const L=SCH[S.si];
+  const target=L[S.fi||0];
+  const spec=getMockSpec(S);
+  const pen=calcJumpPenalty(S,spec);
+  const list=MOCK_LIST[S.si];
+  const bTag=target[2]?.bunri&&target[2].bunri!=='共'?` [${target[2].bunri}]`:'';
+
+  H('setup-mock-config-box').innerHTML=`
+    <div class="flex justify-between items-center gap-1">
+      <span class="text-yellow-300 font-bold">第一志望：${target[0]}${bTag}（目安 ${target[1]}）</span>
+    </div>
+    <div class="space-y-1.5 pt-1.5 border-t border-amber-300/30">
+      <label class="block text-[10px] text-amber-200">▼ 受ける模試コース（上の学年の模試への飛び級受験も可）</label>
+      <select onchange="this.value==='auto'?setMockSetting('auto',0,false):setMockSetting('manual',+this.value,false)"
+        class="w-full bg-[#08080c] border border-amber-300 px-2.5 py-2 text-xs text-white outline-none min-h-[40px]">
+        <option value="auto" ${S.mockMode!=='manual'?'selected':''}>★ 学年・志望校連動オート（${list[autoMockIdx(S.si,S.fi||0,0)].name}）</option>
+        ${list.map((m,idx)=>{
+          const p=calcJumpPenalty(S,m);
+          return`<option value="${idx}" ${S.mockMode==='manual'&&S.mockIdx===idx?'selected':''}>${p>0?`[飛び級-${p}] `:''}${m.name}（${m.tag}）</option>`;
+        }).join('')}
+      </select>
+      <p class="text-[10px] text-neutral-300 leading-snug">${pen>0?`<span class="text-red-400 font-bold">※飛び級ペナルティ（偏差値-${pen}／最低25.0）が適用されます。</span> `:''}${spec.desc}</p>
+    </div>`;
+
+  if(S.si===2){
+    const fBtns=[['all','すべて'],['文','文系'],['理','理系'],['医','医歯薬'],['難関','難関'],['国公立','国公立'],['MARCH関関同立','MARCH関関'],['中堅','中堅']];
+    H('setup-filter-bar').innerHTML=fBtns.map(([k,lbl])=>`<button onclick="setSetupUniFilter('${k}')" class="rpg-cmd px-2 py-1 text-[10px] ${setupUniFilter===k?'border-yellow-300 text-yellow-300 bg-[#141a33]':'text-neutral-300'}">${lbl}</button>`).join('');
+  }else{
+    H('setup-filter-bar').innerHTML='';
+  }
+
+  const q=(H('setup-search-input')?.value||'').trim();
+  const filtered=L.slice(0,-1).map((s,i)=>({s,i})).filter(({s})=>{
+    if(q&&!s[0].includes(q))return false;
+    if(S.si!==2||setupUniFilter==='all')return true;
+    const m=s[2]||{};
+    if(['文','理','医'].includes(setupUniFilter))return m.bunri===setupUniFilter||m.bunri==='共';
+    if(setupUniFilter==='国公立')return m.isNat;
+    return m.grp===setupUniFilter;
+  });
+
+  H('uni-selection-list').innerHTML=filtered.slice(0,90).map(({s,i})=>{
+    const m=s[2]||{};
+    const tag=S.si===2?`<span class="text-[9px] border ${m.isNat?'border-emerald-400 text-emerald-300':'border-sky-400 text-sky-300'} px-1 mr-1">${m.isNat?'国':'私'}${m.bunri}</span>`:'';
+    return`<button onclick="selectTargetSchool(${i},false)" class="rpg-cmd w-full p-2.5 min-h-[44px] text-left text-xs flex justify-between items-center ${S.fi==i?'border-yellow-300 text-yellow-300 bg-[#141a33]':''}"><span class="truncate pr-1"><span class="cursor-arrow">▶</span> ${tag}${s[0]}</span><span class="text-[11px] text-neutral-300 shrink-0">目安 ${s[1]}</span></button>`;
+  }).join('')+(filtered.length>90?`<p class="text-[10px] text-neutral-400 text-center py-1">ほか ${filtered.length-90}件（検索ワードで絞り込めます）</p>`:'')||'<p class="text-xs text-neutral-400 py-2 text-center">該当する学校・学部が見つかりません</p>';
+}
+
+function beginGameLoop(){
+  S.name=(H('input-player-name').value||'ロト').slice(0,10);
+  if(S.isDiag&&!S.diagLogged){
+    S.diagLogged=true;
+    S.log.push(`【あなたの診断】${S.name}は「${S.bg}」として受験生活をスタート！`,S.diagDesc||'',`得意：${SUBN[S.sk.s]}（1.3倍） ／ 苦手：${S.sk.w?SUBN[S.sk.w]+'（0.8倍）':'なし'}`);
+    showToast('＊ '+S.name+'は「'+S.bg+'」！');
+  }else if(!S.bg){
+    const g=BG[(RR(S.seed,0,555)*BG.length)|0];S.bg=g[0];S.sk={s:g[2],w:g[3]};S.log.push(`【プロローグ】${S.name}は「${g[0]}」。`,g[1],'得意と苦手は秘密。結果発表で明らかになる…！');showToast('＊ '+S.name+'は「'+g[0]+'」！');
+  }
+  // 初期第一志望に合わせて週間勉強時間を最適化
+  optimizeSubHoursForTarget();
+  go('play');
+}
+
+const SUBN={eng:'英語',math:'数学',jpn:'国語',sci:'理科',soc:'社会',info:'情報'};
+const ACT=[['ふつうに過ごす','変化なし'],['自習に集中','伸び+8%／やる気-1'],['先生に質問','最も低い科目+0.5／やる気+2'],['模試・過去問の復習','弱点科目+0.3／自信+4'],['友達と気分転換','やる気+6・青春+8／伸び-4%'],['ぐっすり休養','体調+10・やる気+3'],['志望校を調べる','自信+3・やる気+4・青春+3']];
+function applyAct(S){const a=S.act||0;(S.acts=S.acts||[]).push(a);S.actMul=1;
+ const lo=()=>S.subA.indexOf(Math.min(...S.subA)),up=(i,v)=>{S.subA[i]=Math.min(AMAX(S),S.subA[i]+v)};
+ if(a==1){S.m=cl(S.m-1);S.actMul=1.08}else if(a==2){up(lo(),.5);S.m=cl(S.m+2)}else if(a==3){up(lo(),.3);S.c=cl(S.c+4)}
+ else if(a==4){S.m=cl(S.m+6);S.y=cl(S.y+8);S.actMul=.96}else if(a==5){S.h=cl(S.h+10);S.m=cl(S.m+3)}else if(a==6){S.c=cl(S.c+3);S.m=cl(S.m+4);S.y=cl(S.y+3)}}
+const effTxt=(e,g)=>{const f=x=>['体調','やる気','自信','青春','学力'].map((n,i)=>x[i]?n+(x[i]>0?'+':'')+x[i]:'').filter(Boolean).join(' ');return f(e)+(g?`｜成功率${Math.round(g[0]*100)}%（失敗：${f(g[1])}）`:'')};
+const BG=[['図書館の主','「…その本、もう三回読んだよ。」物語の世界で育った。','jpn','math'],['そろばん少年','「パチパチ…答えは12345！」指が勝手に動いてしまう。','math','jpn'],['海外育ち','「えっと、ハロー…じゃなくて、こんにちは！」','eng','jpn'],['理科室の住人','「見て！ミョウバンの結晶が育ったよ！」','sci','soc'],['歴史オタク','「その戦、三国志ならこう動く！」','soc','sci'],['ゲーム沼','「あと1ステージだけ…」夜ふかしの達人。','info','eng'],['おしゃべり好き','「ねえ聞いて、昨日ね〜」人と話すのが得意。','eng','math'],['コツコツ型','「毎日少しずつ…」地味だけど積み上げが得意。','soc','info']];
+const HERO='<svg class="sprite" width="22" height="22" viewBox="0 0 8 8" shape-rendering="crispEdges"><path fill="#f5c9a0" d="M2 2h4v3H2z"/><path fill="#3b2a1a" d="M2 1h4v1H2zM1 2h1v2H1zM6 2h1v2H6z"/><path fill="#1c1c2e" d="M3 3h1v1H3zM5 3h1v1H5z"/><path fill="#e0562b" d="M2 5h4v2H2z"/><path fill="#38bdf8" d="M1 6h1v2H1zM6 6h1v2H6z"/></svg>';
+function bkExport(){const d=JSON.stringify({s:ld('jg_s'),r:ld('jg_r'),x:ld('jg_x')});try{navigator.clipboard.writeText(d).then(()=>showToast('＊ バックアップをコピーしました'),()=>prompt('このテキストを保存してください',d))}catch(e){prompt('このテキストを保存してください',d)}}
+function bkImport(){const t=prompt('バックアップのテキストを貼り付けてください');if(!t)return;try{const d=JSON.parse(t);if(d.s)sv('jg_s',d.s);if(d.r)sv('jg_r',d.r);if(d.x)sv('jg_x',d.x);showToast('＊ 復元しました');Home()}catch(e){showToast('＊ 読み込めませんでした')}}
+
+const EVC=S=>EV.map((e,i)=>i).filter(i=>(!EV[i][3]||EV[i][3].includes(S.si))&&!/大学|共通テスト|二次試験/.test(EV[i][0]));
+EV.push(
+['塾の宿題が山のように出た',['全部やりきる',[-4,-2,3,-2,.8]],['優先順位をつけて絞る',[0,2,1,1,.5]],[0]],
+['夏期講習の季節。友達も参加するらしい',['朝から夜まで通い詰める',[-6,-3,2,-4,1]],['半分だけ参加して家で復習',[-1,1,1,2,.5]],[0]],
+['親が志望校の過去問を買ってきた',['さっそく解いてみる',[0,3,6,0,.9],[.6,[0,-4,-6,0,.1]]],['まだ早いと断る',[0,1,0,1,.1]],[0]],
+['志望校の学校説明会に行けることになった',['見に行く',[-1,9,4,3,.2]],['行かずに勉強',[0,0,0,-2,.5]],[0]],
+['塾のクラス替えテストの日',['全力で挑む',[-3,2,8,0,.6],[.55,[-3,-6,-8,0,-.2]]],['練習のつもりで受ける',[0,0,1,0,.3]],[0]],
+['仲良しの友達が塾をやめることになった',['話を聞いて励ます',[0,-2,1,3,0]],['気にしない',[0,1,0,0,.2]],[0]],
+['習いごとの発表会と模試が同じ週に重なった',['発表会に全力',[0,3,2,8,-.4]],['模試に集中',[-2,-2,2,-5,.6]],[0]],
+['家族旅行の計画が持ち上がった',['行く（気分転換）',[6,6,2,8,-.3]],['今回はパス',[0,-3,0,-4,.4]],[0]],
+['部活の大会が近づいている',['練習を優先',[-3,5,2,8,-.4]],['勉強を優先して早めに切り上げる',[0,-2,1,-5,.5]],[1]],
+['内申点がピンチ。提出物が溜まっている',['徹夜で片付ける',[-6,-3,4,-2,.4]],['計画的に毎日少しずつ',[-1,1,3,0,.6]],[1]],
+['担任との三者面談で志望校の話になった',['強気に上を目指すと伝える',[0,7,3,0,.4]],['無難に決める',[0,-2,2,0,.2]],[1]],
+['文化祭の実行委員に誘われた',['引き受ける',[-3,5,2,12,-.5]],['断って勉強',[0,-1,1,-5,.5]],[1]],
+['グループチャットが夜中まで盛り上がっている',['通知を切って寝る',[4,2,1,-2,.2]],['ちょっとだけ参加',[-3,-3,0,7,-.3]],[1]],
+['修学旅行の季節がきた',['思いきり楽しむ',[3,8,3,10,-.5]],['勉強道具を持っていく',[-1,-2,1,-3,.3]],[1]],
+['私立の併願校の説明会に行く？',['行ってみる',[-1,5,5,2,.3]],['公立だけに絞る',[0,0,-1,0,.2]],[1]],
+['冬休み前の最後の定期テスト',['一夜漬けで挑む',[-4,0,7,-2,.9],[.5,[-5,-4,-6,-2,-.3]]],['計画通りに復習',[0,1,2,0,.5]],[1]],
+['登校中、道ばたで子猫を見つけた',['しばらく眺めていく',[2,5,0,5,-.1]],['急いで学校へ',[0,0,0,0,.1]]],
+['机の上が散らかって集中できない',['思いきって大掃除',[-1,4,2,1,.3]],['このまま勉強する',[0,-2,0,0,.1]]],
+['祖父母が参考書代をくれた',['新しい問題集を買う',[0,5,3,0,.6]],['好きな本を買う',[1,4,0,5,0]]],
+['風邪が流行している',['マスクと手洗いを徹底',[2,0,1,0,0]],['気にせず無理をする',[-6,-1,0,0,.3]]],
+['友達から「今度のテスト、勝負しよう！」と言われた',['受けて立つ',[-2,7,6,0,.6],[.55,[-2,-3,-6,0,.1]]],['のんびり構える',[1,1,0,1,.1]]],
+['やる気が出ない日がきた。体も重い…',['好きなことで気分転換',[3,6,0,5,-.2]],['気合いで机に向かう',[-3,-2,0,-2,.4]]],
+['体調がかなり悪い。朝から頭が痛い',['今日は思いきって休む',[12,3,0,0,-.2]],['無理して登校・勉強',[-8,-3,0,0,.4]]],
+['最近すごく調子がいい！自信がついてきた',['この勢いで難しい問題に挑む',[-1,6,7,0,.8],[.6,[-2,-3,-5,0,0]]],['慎重に基礎を固める',[0,2,2,0,.5]]],
+['wakaranTVの高田ふーしんが「学歴は信用なり！第一志望以外は認めん！」と叫んでいる',['反骨心で燃えてやる気が出た！',[0,9,4,-1,0.5]],['プレッシャーでやる気が下がった…',[-1,-8,-5,0,-0.1]]],
+['wakaranTVのびーやまもが「ヤメロ！オマエ！偏差値だけで人を判断するな！」とツッコんでいる',['少し気が楽になってやる気が出た',[1,6,3,2,0.2]],['いや、やっぱり上を目指すと決意',[-1,4,4,-1,0.5]]],
+['wakaranTVの街頭インタビュー動画で「お前の志望校、Fランやないか！」と煽られているのを見た',['悔しくて机に向かいやる気が出た！',[-1,8,2,-1,0.6]],['画面を閉じてやる気が下がった…',[0,-9,-6,0,-0.2]]],
+['wakaranTVの高田ふーしんが「学歴食物連鎖の頂点やで！アハハハハハ！」と高笑いしている',['頂点を目指してやる気が出た！',[-1,7,5,-1,0.5]],['異次元すぎてやる気が下がった…',[0,-7,-4,1,-0.1]]],
+['wakaranTVが自分の通う学校の前に来てハイスクール調査をしている噂を聞いた',['取材に誇れるよう勉強しやる気が出た',[0,8,4,1,0.4]],['見つからないよう隠れてやる気が下がった',[-1,-5,-3,0,0]]],
+['wakaranTVのびーやまもが「偏差値37からでも1年本気でやれば逆転できる！」と熱く語っている',['希望が湧いてやる気が出た！',[0,10,6,0,0.4]],['「どうせ一部の才能だろ」とやる気が下がった',[0,-6,-4,0,-0.1]]],
+['wakaranTVの動画で「この時期にこの判定はバカタレ！」と画面越しに喝を入れられた',['目が覚めてやる気が出た！',[-1,7,2,0,0.6]],['図星すぎてやる気が下がった…',[-1,-8,-5,0,-0.1]]],
+['河野素人が動画の冒頭で真顔で「何やってるんですか？勉強してください！」と言ってきた',['スマホを置いて即勉強しやる気が出た！',[0,9,3,-1,0.7]],['正論すぎてグサッときてやる気が下がった',[0,-7,-3,0,-0.1]]],
+['河野素人が「それだけ？って反論するひまがあったら勉強してください」と言い放った',['言い訳をやめて勉強しやる気が出た！',[-1,8,4,-1,0.7]],['厳しすぎて心が折れやる気が下がった…',[-1,-8,-5,0,-0.2]]],
+['河野素人が「勉強する人は勝手に勉強してます。みなさんも勝手に勉強してください」と淡々と語った',['自立心が芽生えてやる気が出た！',[0,8,5,0,0.6]],['突き放された気分でやる気が下がった…',[0,-6,-4,0,-0.1]]],
+['河野素人が「勉強したらもっとマシな言い訳ができるようになります」と論理的に詰めてきた',['納得して机に向かいやる気が出た！',[0,7,4,0,0.6]],['頭が痛くなってやる気が下がった…',[-2,-6,-3,0,0]]],
+['河野素人の10時間勉強ライブ配信を開いたら、画面の向こうで無言でペンを走らせ続けていた',['一緒に集中して勉強しやる気が出た！',[-2,8,4,-1,0.8]],['バケモノすぎて自分のペースを見失った',[-2,-5,-4,0,0.1]]],
+['河野素人が「頭脳王レベルの効率暗記法」を早口で解説している切り抜きが流れてきた',['真似して試したら手応えがありやる気が出た',[0,7,5,0,0.6]],['マネできずに挫折してやる気が下がった…',[-1,-6,-4,0,0]]],
+['竹田塾チャンネルのタカダ先生が「授業を聞くな！参考書を1冊ずつ完璧にしろ！」と叫んでいる',['手持ちの1冊を徹底復習しやる気が出た！',[0,7,5,0,0.6]],['これまでの授業ノートが不安になりやる気低下',[0,-6,-5,0,0]]],
+['参考書ルート動画を見すぎて、完璧な計画表だけ作って1ページも進まない現象に陥った',['気を取り直して最初の1ページを開いた',[0,4,2,0,0.4]],['計画倒れに自己嫌悪でやる気が下がった…',[0,-8,-5,0,-0.2]]],
+['竹田塾の「4日進んで2日復習の黄金ペース」を取り入れてみた',['定着を実感してやる気が出た！',[0,8,5,0,0.7]],['復習日に溜まりすぎてやる気が下がった…',[-2,-6,-3,0,0.2]]],
+['灘卒YouTuberのベテランちいが「結局、地頭と狂気の勉強量なんですよね」と虚無顔で語っている',['狂気の勉強量で対抗しようとやる気が出た！',[-2,7,3,-1,0.6]],['虚無感に襲われてやる気が下がった…',[0,-9,-5,1,-0.1]]],
+['雷獣チャンネルの学歴トーク動画で、難関校の異次元エピソードを聞いてしまった',['憧れが強くなりやる気が出た！',[0,8,3,1,0.4]],['住む世界が違うとやる気が下がった…',[0,-7,-6,0,-0.1]]],
+['ヨビノリたくみんが「今週の積分！」と楽しそうに黒板いっぱいの数式を解いている',['勉強が面白く思えてやる気が出た！',[0,8,4,1,0.5]],['数式アレルギーが出てやる気が下がった…',[-1,-6,-3,0,0]]],
+['キャストダイスのコバショーが「戦略なき努力はただの自己満足です」と冷静に分析している',['過去問の傾向を見直してやる気が出た！',[0,7,5,0,0.6]],['自分の勉強法を否定された気分でやる気低下',[0,-7,-4,0,-0.1]]],
+['現代文の林先生が「いつやるか？今でしょ！」とテレビ画面から指を差してきた',['ベタだけどスイッチが入りやる気が出た！',[0,8,3,1,0.5]],['「明日でいいや…」と先延ばししてやる気低下',[1,-5,-2,2,-0.2]]],
+['ドラゴン梅の桜木先生が「バカとブスこそ難関校に行け！社会のルールに騙されるな！」と叫んでいる',['下剋上を誓ってやる気が出た！',[-1,10,5,-1,0.6]],['言葉が強すぎて凹んでやる気が下がった…',[0,-7,-4,0,-0.1]]],
+['英語講師の関正夫先生が「丸暗記するな！英語の核心を理解しろ！」と熱弁している',['目からウロコが落ちてやる気が出た！',[0,8,5,0,0.6]],['今までの暗記が虚しくなりやる気が下がった',[0,-5,-3,0,0]]],
+['「受験生の虎」で志願者が「志望理由が甘すぎる！リターン・ゼロ！」と詰められているのを見た',['気を引き締めて机に向かいやる気が出た！',[0,7,4,0,0.5]],['自分が怒られた気分になりやる気が下がった',[0,-6,-4,0,0]]],
+['SNSで「合格発表で魂の咆哮を上げる受験パルキア」のミーム動画が流れてきた',['あの歓喜を味わいたくてやる気が出た！',[0,9,4,2,0.4]],['笑いすぎて勉強時間が溶け、少しやる気低下',[1,-3,0,4,-0.2]]],
+['SNSで「まあ、でも幸せならOKです！」と親指を立てるミーム画像を見てしまった',['肩の力が抜けて前向きにやる気が出た！',[2,6,3,3,0.2]],['「もう受験いいかな…」とやる気が下がった…',[2,-8,-2,4,-0.3]]],
+['学歴板の「4月：どの参考書がいいか → 1月：来年本気出す」のコピペを読んでしまった',['絶対こうはならないと誓いやる気が出た！',[0,8,4,0,0.5]],['未来の自分を見ているようでやる気が下がった',[0,-8,-5,0,-0.2]]],
+['テスト前の同級生が「昨日マジで1秒も勉強してないわ〜」と言いながら高得点を取っていた',['負けじと陰で努力を続けやる気が出た！',[-1,6,2,0,0.6]],['天才との差を見せつけられやる気が下がった',[0,-8,-6,0,-0.1]]],
+['模試のE判定を「伸びしろのE（Excellent）！」と言い換えるポジティブミームを見た',['前向きに弱点分析をしてやる気が出た！',[0,7,5,1,0.4]],['現実逃避だと気づいてやる気が下がった…',[0,-6,-4,0,-0.1]]],
+['深夜2時に「今から本気出せば第一志望いけるか？」とネット検索してスレッドを読み漁った',['「いける！」というレスを信じてやる気が出た',[-2,8,4,-1,0.3]],['「無理に決まってる」というレスを見てやる気低下',[-2,-9,-6,0,-0.2]]],
+['偏差値70超えの先輩の「教科書を普通にやれば受かるよ」というアドバイスを聞いた',['基礎を徹底しようとやる気が出た！',[0,6,3,0,0.5]],['「普通」の基準が高すぎてやる気が下がった',[0,-7,-5,0,-0.1]]],
+['塾の合格実績ポスターの隅にある「※現役・浪人・講習生含む」の小さな注釈に気づいてしまった',['数字に惑わされず自分の実力を磨くと決意',[0,5,4,0,0.4]],['大人の事情を知ってしまい少しやる気低下',[0,-5,-2,1,0]]],
+['自習室の隣の席に「電卓早打ち＆貧乏ゆすり＆シャーペン連打」の猛者が座ってきた',['どんな環境でも集中する訓練だとやる気が出た',[-1,5,4,0,0.5]],['集中力が完全に切れてやる気が下がった…',[-2,-7,-2,0,-0.2]]],
+['SNSで「1日15時間勉強ルーティン」のタイムラプス動画がおすすめに出てきた',['刺激を受けて机に向かいやる気が出た！',[-1,8,3,-1,0.6]],['人間離れしたスケジュールにやる気が下がった',[0,-7,-4,0,-0.1]]],
+['「ビリギャルみたいに偏差値40から1年で難関校に逆転合格！」という体験談を読んだ',['自分も奇跡を起こすと燃えてやる気が出た！',[0,9,6,0,0.5]],['「元々進学校だったらしい」と知りやる気低下',[0,-6,-4,0,-0.1]]],
+['友人が「受かったら〇〇する！」とフラグを立てまくっているのを見てしまった',['自分は黙々と過去問を解いてやる気が出た！',[0,6,4,1,0.5]],['不安が伝染してソワソワしやる気が下がった',[-1,-5,-3,1,0]]],
+['ショートスリーパーの堀大好きが「1日30分睡眠で24時間活動できる！」と生配信している',['真似して睡眠を削り深夜まで勉強！',[-7,4,2,-1,0.7]],['「しっかり寝た方が記憶が定着する」とぐっすり寝る',[7,4,2,0,0.3]]],
+['堀大好きが「昔は東大A判定だった！…まあ町でやってた非公式の模試なんですけど」と語っている',['「自分も公式模試で本物のA判定を取る！」とやる気が出た！',[0,9,4,0,0.6]],['「非公式って何だよｗ」とツッコミすぎてやる気が下がった',[1,-4,0,3,-0.1]]],
+['堀大好きが「どこの予備校の模試受けたの？」と詰められ「とりあえず覚えてないです」と目を泳がせている',['反面教師にして模試の復習ノートをきっちり作った！',[0,7,5,0,0.6]],['笑いすぎてお腹が痛くなり勉強の手が止まった…',[1,-3,0,4,-0.2]]],
+['睡眠を削る堀大好きが「1分で1万文字の速読ができる」と豪語している',['英語や国語の速読トレーニングを取り入れてやる気が出た！',[-1,7,4,0,0.6]],['文字を目で追うだけで全く頭に入らずやる気低下…',[-1,-6,-3,0,-0.1]]],
+['堀大好きが「トップ校を見に行ったら学生が遊んでたから進学をやめた」と語っている',['「自分は合格して勉強も遊びも全力で楽しむ！」とやる気が出た！',[0,9,5,2,0.5]],['「たしかに今こんなに頑張る意味ある？」とやる気が下がった',[1,-8,-4,2,-0.2]]]
+);
+
+Home();
+  </script>
+</body>
+</html>
